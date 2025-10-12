@@ -43,7 +43,8 @@
         const API_URL = 'http://localhost:3000';
         let turn = 1;
         let machineState = {};
-
+        let conversationId = null;
+        
         const messagesDiv = document.getElementById('messages');
         const logsDiv = document.getElementById('logs');
         const userInput = document.getElementById('userInput');
@@ -98,6 +99,8 @@
         // Send message to server
         async function sendMessage() {
             const prompt = userInput.value.trim();
+            console.log(machineState)
+            const context = machineState?.audit?.contextTrail?.[0] || '';
             if (!prompt) return;
 
             // Disable input while processing
@@ -119,25 +122,30 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ prompt, turn })
+                    body: JSON.stringify({ prompt, turn, context, conversationId })
                     
                 });
-
+                console.log(response.body)
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const data = await response.json();
-
+                console.log(data)
+                conversationId = data?.conversationId;
+                console.log(conversationId)
                 // Log response
                 addLog('response', data.response);
 
                 // Update machine state
                 if (data.response.turn !== undefined) {
                     turn = data.response.turn + 1;
-                    machineState = {... data.response, turn };
+                    machineState = data.response;  // Keep the entire response object
+                    machineState.turn = turn;  // Update turn for next iteration
+                    console.log('Machine State:', machineState);
+                    console.log('Audit Trail:', machineState.audit?.contextTrail);
                 }
-                console.log(data)
+                
                 // Add bot response to chat
                 if (data.response.answer) {
                     addMessage(data.response.answer, true);

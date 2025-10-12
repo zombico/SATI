@@ -5,6 +5,7 @@ const path = require('path');
 const SimpleRAG = require('./rag');
 const config = require('./config/config.json');
 const fs = require('fs');
+const crypto = require('crypto');
 const Database = require('better-sqlite3');
 
 const app = express();
@@ -26,58 +27,79 @@ const db = new Database('./conversation.db');
 db.exec(`
     CREATE TABLE IF NOT EXISTS turns (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        conversation_id TEXT NOT NULL,
         turn INTEGER NOT NULL,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         user_prompt TEXT NOT NULL,
         full_prompt TEXT,
         llm_response TEXT,
         machine_state TEXT,
-        rag_context TEXT
+        rag_context TEXT,
+        content_hash TEXT NOT NULL,
+        chain_hash TEXT NOT NULL
     )
 `);
 
 // Prepare insert statement for reuse
 const insertTurn = db.prepare(`
-    INSERT INTO turns (turn, user_prompt, full_prompt, llm_response, machine_state, rag_context)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO turns (conversation_id, turn, user_prompt, full_prompt, llm_response, machine_state, rag_context, content_hash, chain_hash)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
-
-
 
 app.post('/chat', async (req, res) => {
     try {
-        let { prompt, turn } = req.body;
-        const result = await assemblePrompt(config, prompt)
+        let { prompt, turn, context, conversationId } = req.body;
+        // Generate conversationId if new conversation
+        if (!conversationId) {
+            conversationId = crypto.randomUUID();
+        }
+
+        const result = await assemblePrompt(config, prompt, context)
         const satiJson = JSON.parse(result)
         satiJson.turn = turn + 1
-        insertTurn.run(
+
+        // Generate hashes
+        const contentHash = hashTurnContent(
             satiJson.turn,
             prompt,
-            null,  // Store full_prompt if you want to log it
+            result,
+            JSON.stringify(satiJson)
+        );
+        const previousChainHash = getLastChainHash(conversationId);
+        const chainHash = createChainHash(contentHash, previousChainHash);
+
+        insertTurn.run(
+            conversationId,        // NEW: First parameter
+            satiJson.turn,
+            prompt,
+            null,
             result,
             JSON.stringify(satiJson),
-            null   // Add RAG context if you're using ragInstance
+            null,
+            contentHash,
+            chainHash
         );
 
-        console.log(satiJson.answer)
-        console.log(satiJson.turn)
-        res.json({ response: satiJson }); 
-    } catch(e) {
+
+        console.log(`Turn ${satiJson.turn} | Chain: ${chainHash.substring(0, 8)}...`);
+        res.json({ response: satiJson, conversationId });
+    } catch (e) {
         console.error(e)
         res.status(500).json({ error: 'Internal server error' });
     }
 })
 
 // Generic context processor
-async function assemblePrompt(contextConfig, userPrompt) {
-    console.log(contextConfig)
+async function assemblePrompt(contextConfig, userPrompt, context) {
+
     const instructionsPath = path.join(__dirname, contextConfig.config.instructions)
     const instructions = fs.readFileSync(instructionsPath, "utf-8");
 
     // Build full prompt with instructions and protocol
     const fullPrompt = [
         instructions,
-        userPrompt
+        userPrompt,
+        `Past context: ${context}`
     ].filter(Boolean).join('\n\n'); // filter removes empty strings
     console.log(fullPrompt)
     const response = await axios.post(`${LLAMA_HOST}/api/generate`, {
@@ -87,10 +109,87 @@ async function assemblePrompt(contextConfig, userPrompt) {
     }, { timeout: 300000 });
 
     const result = response.data.response;
-  console.log(result)
-    
+    console.log(result)
+
     return result;
 }
+
+// Hash the content of this turn
+function hashTurnContent(turn, userPrompt, llmResponse, machineState) {
+    const content = JSON.stringify({
+        turn,
+        userPrompt,
+        llmResponse,
+        machineState
+    });
+    return crypto.createHash('sha256').update(content).digest('hex');
+}
+
+// Create chain hash linking to previous turn
+function createChainHash(contentHash, previousChainHash) {
+    const combined = contentHash + (previousChainHash || '0');
+    return crypto.createHash('sha256').update(combined).digest('hex');
+}
+
+// Get the last chain hash from database
+function getLastChainHash(conversationId) {
+    const lastTurn = db.prepare(
+        'SELECT chain_hash FROM turns WHERE conversation_id = ? ORDER BY turn DESC LIMIT 1'
+    ).get(conversationId);
+    return lastTurn ? lastTurn.chain_hash : null;
+}
+
+app.get('/verify/:conversationId?', (req, res) => {
+    const { conversationId } = req.params;
+    
+    // Build query based on whether we're verifying specific conversation or all
+    const query = conversationId 
+        ? 'SELECT id, turn, conversation_id, user_prompt, llm_response, machine_state, content_hash, chain_hash FROM turns WHERE conversation_id = ? ORDER BY turn ASC'
+        : 'SELECT id, turn, conversation_id, user_prompt, llm_response, machine_state, content_hash, chain_hash FROM turns ORDER BY conversation_id, turn ASC';
+    
+    const stmt = conversationId ? db.prepare(query) : db.prepare(query);
+    const turns = conversationId ? stmt.all(conversationId) : stmt.all();
+
+    if (turns.length === 0) {
+        return res.json({ valid: true, totalTurns: 0, message: 'No turns to verify' });
+    }
+
+    // Track chain per conversation
+    const chainMap = new Map();
+    let isValid = true;
+    let invalidCount = 0;
+
+    for (const turn of turns) {
+        const prevHash = chainMap.get(turn.conversation_id) || null;
+        
+        // Verify content hash
+        const expectedContentHash = hashTurnContent(
+            turn.turn,
+            turn.user_prompt,
+            turn.llm_response,
+            turn.machine_state
+        );
+        const contentValid = expectedContentHash === turn.content_hash;
+
+        // Verify chain hash
+        const expectedChainHash = createChainHash(turn.content_hash, prevHash);
+        const chainValid = expectedChainHash === turn.chain_hash;
+
+        if (!contentValid || !chainValid) {
+            isValid = false;
+            invalidCount++;
+        }
+
+        chainMap.set(turn.conversation_id, turn.chain_hash);
+    }
+
+    res.json({
+        valid: isValid,
+        totalTurns: turns.length,
+        invalidTurns: invalidCount,
+        conversationsVerified: chainMap.size
+    });
+});
 
 app.get('/history', (req, res) => {
     const history = db.prepare('SELECT * FROM turns ORDER BY id ASC').all();

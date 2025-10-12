@@ -16,7 +16,7 @@ RESPOND ONLY IN VALID JSON
     "confidence": "%",
     "audit": {
         "references": [],
-        "contextTrail": []
+        "contextTrail": "situation summary"
     }
 }
 
