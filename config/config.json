@@ -1,0 +1,7 @@
+{
+    "config": {
+        "documentsPath": "./documents",
+        "instructions": "./config/incometax-instructions.txt",
+        "name": "Income Tax Act helper bot"
+    }
+}
