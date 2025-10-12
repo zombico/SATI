@@ -11,7 +11,7 @@ const PORT = 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../client')));
+app.use(express.static(path.join(__dirname, './client')));
 
 const LLAMA_HOST = 'http://localhost:11434';
 const MODEL_NAME = 'mistral';
