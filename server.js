@@ -5,6 +5,7 @@ const path = require('path');
 const SimpleRAG = require('./rag');
 const config = require('./config/config.json');
 const fs = require('fs');
+const Database = require('better-sqlite3');
 
 const app = express();
 const PORT = 3000;
@@ -18,12 +19,30 @@ const MODEL_NAME = 'mistral';
 
 let ragInstance = null;
 
-app.listen(PORT, async () => {
-    const documentsPath = path.join(__dirname, config.config.documentsPath);
-    ragInstance = new SimpleRAG(documentsPath);
-    await ragInstance.initialize();
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+// Initialize database
+const db = new Database('./conversation.db');
+
+// Create table on startup
+db.exec(`
+    CREATE TABLE IF NOT EXISTS turns (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        turn INTEGER NOT NULL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        user_prompt TEXT NOT NULL,
+        full_prompt TEXT,
+        llm_response TEXT,
+        machine_state TEXT,
+        rag_context TEXT
+    )
+`);
+
+// Prepare insert statement for reuse
+const insertTurn = db.prepare(`
+    INSERT INTO turns (turn, user_prompt, full_prompt, llm_response, machine_state, rag_context)
+    VALUES (?, ?, ?, ?, ?, ?)
+`);
+
+
 
 app.post('/chat', async (req, res) => {
     try {
@@ -31,6 +50,15 @@ app.post('/chat', async (req, res) => {
         const result = await assemblePrompt(config, prompt)
         const satiJson = JSON.parse(result)
         satiJson.turn = turn + 1
+        insertTurn.run(
+            satiJson.turn,
+            prompt,
+            null,  // Store full_prompt if you want to log it
+            result,
+            JSON.stringify(satiJson),
+            null   // Add RAG context if you're using ragInstance
+        );
+
         console.log(satiJson.answer)
         console.log(satiJson.turn)
         res.json({ response: satiJson }); 
@@ -64,6 +92,25 @@ async function assemblePrompt(contextConfig, userPrompt) {
     return result;
 }
 
-app.listen(PORT, () => {
+app.get('/history', (req, res) => {
+    const history = db.prepare('SELECT * FROM turns ORDER BY id ASC').all();
+    res.json(history);
+});
+
+app.get('/history/:turn', (req, res) => {
+    const turn = db.prepare('SELECT * FROM turns WHERE turn = ?').get(req.params.turn);
+    res.json(turn);
+});
+
+app.listen(PORT, async () => {
+    const documentsPath = path.join(__dirname, config.config.documentsPath);
+    ragInstance = new SimpleRAG(documentsPath);
+    await ragInstance.initialize();
     console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Database initialized: conversation.db`);
+});
+
+process.on('SIGINT', () => {
+    db.close();
+    process.exit(0);
 });
