@@ -10,6 +10,33 @@ const Database = require('better-sqlite3');
 
 const app = express();
 const PORT = 3000;
+const promClient = require('prom-client');
+
+// Create a Registry to register metrics
+const register = new promClient.Registry();
+
+// Collect default metrics (CPU, memory, event loop lag, etc.)
+promClient.collectDefaultMetrics({
+    register: register,
+    prefix: 'node_'
+});
+
+// Add custom metrics for your conversation system
+const conversationCounter = new promClient.Counter({
+    name: 'conversation_turns_total',
+    help: 'Total number of conversation turns processed',
+    labelNames: ['conversation_id']
+});
+
+const responseTime = new promClient.Histogram({
+    name: 'llm_response_duration_seconds',
+    help: 'Duration of LLM response generation',
+    buckets: [0.1, 0.5, 1, 2, 5, 10, 30]
+});
+
+register.registerMetric(conversationCounter);
+register.registerMetric(responseTime);
+
 
 app.use(cors());
 app.use(express.json());
@@ -47,6 +74,7 @@ const insertTurn = db.prepare(`
 `);
 
 app.post('/chat', async (req, res) => {
+    const end = responseTime.startTimer();
     try {
         let { prompt, turn, context, conversationId } = req.body;
         // Generate conversationId if new conversation
@@ -57,7 +85,8 @@ app.post('/chat', async (req, res) => {
         const result = await assemblePrompt(config, prompt, context)
         const satiJson = JSON.parse(result)
         satiJson.turn = turn + 1
-
+        // Record metrics
+        conversationCounter.inc({ conversation_id: conversationId });
         // Generate hashes
         const contentHash = hashTurnContent(
             satiJson.turn,
@@ -82,8 +111,10 @@ app.post('/chat', async (req, res) => {
 
 
         console.log(`Turn ${satiJson.turn} | Chain: ${chainHash.substring(0, 8)}...`);
+        end(); // Record response time
         res.json({ response: satiJson, conversationId });
     } catch (e) {
+        end(); // Record failed request time
         console.error(e)
         res.status(500).json({ error: 'Internal server error' });
     }
@@ -139,7 +170,7 @@ function getLastChainHash(conversationId) {
     return lastTurn ? lastTurn.chain_hash : null;
 }
 
-app.get('/verify/:conversationId?', (req, res) => {
+app.get('/verify{/:conversationId}', (req, res) => {
     const { conversationId } = req.params;
     
     // Build query based on whether we're verifying specific conversation or all
@@ -200,6 +231,12 @@ app.get('/history/:turn', (req, res) => {
     const turn = db.prepare('SELECT * FROM turns WHERE turn = ?').get(req.params.turn);
     res.json(turn);
 });
+
+app.get('/metrics', async (req, res) => {
+    res.setHeader('Content-Type', register.contentType);
+    res.send(await register.metrics());
+});
+
 
 app.listen(PORT, async () => {
     const documentsPath = path.join(__dirname, config.config.documentsPath);
