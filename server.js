@@ -127,7 +127,7 @@ app.post('/chat', async (req, res) => {
         }
 
         const result = await assemblePrompt(config, prompt)
-        console.log(result)
+        
         const satiJson = JSON.parse(result.response)
         const trace = result.trace
         satiJson.turn = turn + 1
