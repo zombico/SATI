@@ -15,8 +15,7 @@ RESPOND ONLY IN VALID JSON
     "answer": "Your message to user",
     "confidence": "%",
     "audit": {
-        "references": [],
-        "contextTrail": "situation summary"
+        "references": []
     }
 }
 

@@ -12,6 +12,50 @@ const app = express();
 const PORT = 3000;
 const promClient = require('prom-client');
 
+axios.interceptors.request.use(request => {
+  const timestamp = new Date().toISOString();
+  request.meta = request.meta || {};
+  request.meta.requestTimestamp = timestamp;
+  request.meta.requestStartedAt = Date.now();
+  
+  console.log(`[LOCAL LLM CALL] ${request.method.toUpperCase()} ${request.baseURL || ''}${request.url} | Timestamp: ${timestamp}`);
+  return request;
+});
+
+// Response interceptor: Calculate duration and attach metadata
+axios.interceptors.response.use(
+  response => {
+    const endTime = Date.now();
+    const duration = endTime - response.config.meta.requestStartedAt;
+    
+    response.trace = {
+      requestTimestamp: response.config.meta.requestTimestamp,
+      responseTimestamp: new Date().toISOString(),
+      durationMs: duration,
+      method: response.config.method.toUpperCase(),
+      url: `${response.config.baseURL || ''}${response.config.url}`
+    };
+    
+    return response;
+  },
+  error => {
+    if (error.config && error.config.meta) {
+      const endTime = Date.now();
+      const duration = endTime - error.config.meta.requestStartedAt;
+      
+      error.trace = {
+        requestTimestamp: error.config.meta.requestTimestamp,
+        responseTimestamp: new Date().toISOString(),
+        durationMs: duration,
+        method: error.config.method.toUpperCase(),
+        url: `${error.config.baseURL || ''}${error.config.url}`,
+        error: true
+      };
+    }
+    throw error;
+  }
+);
+
 // Create a Registry to register metrics
 const register = new promClient.Registry();
 
@@ -76,14 +120,16 @@ const insertTurn = db.prepare(`
 app.post('/chat', async (req, res) => {
     const end = responseTime.startTimer();
     try {
-        let { prompt, turn, context, conversationId } = req.body;
+        let { prompt, turn, conversationId } = req.body;
         // Generate conversationId if new conversation
         if (!conversationId) {
             conversationId = crypto.randomUUID();
         }
 
-        const result = await assemblePrompt(config, prompt, context)
-        const satiJson = JSON.parse(result)
+        const result = await assemblePrompt(config, prompt)
+        console.log(result)
+        const satiJson = JSON.parse(result.response)
+        const trace = result.trace
         satiJson.turn = turn + 1
         // Record metrics
         conversationCounter.inc({ conversation_id: conversationId });
@@ -91,7 +137,7 @@ app.post('/chat', async (req, res) => {
         const contentHash = hashTurnContent(
             satiJson.turn,
             prompt,
-            result,
+            result.response,
             JSON.stringify(satiJson)
         );
         const previousChainHash = getLastChainHash(conversationId);
@@ -102,7 +148,7 @@ app.post('/chat', async (req, res) => {
             satiJson.turn,
             prompt,
             null,
-            result,
+            result.response,
             JSON.stringify(satiJson),
             null,
             contentHash,
@@ -112,7 +158,7 @@ app.post('/chat', async (req, res) => {
 
         console.log(`Turn ${satiJson.turn} | Chain: ${chainHash.substring(0, 8)}...`);
         end(); // Record response time
-        res.json({ response: satiJson, conversationId });
+        res.json({ response: satiJson, conversationId, trace });
     } catch (e) {
         end(); // Record failed request time
         console.error(e)
@@ -121,7 +167,7 @@ app.post('/chat', async (req, res) => {
 })
 
 // Generic context processor
-async function assemblePrompt(contextConfig, userPrompt, context) {
+async function assemblePrompt(contextConfig, userPrompt) {
 
     const instructionsPath = path.join(__dirname, contextConfig.config.instructions)
     const instructions = fs.readFileSync(instructionsPath, "utf-8");
@@ -129,18 +175,19 @@ async function assemblePrompt(contextConfig, userPrompt, context) {
     // Build full prompt with instructions and protocol
     const fullPrompt = [
         instructions,
-        userPrompt,
-        `Past context: ${context}`
+        userPrompt
     ].filter(Boolean).join('\n\n'); // filter removes empty strings
-    console.log(fullPrompt)
+    
     const response = await axios.post(`${LLAMA_HOST}/api/generate`, {
         model: MODEL_NAME,
         prompt: fullPrompt,
         stream: false
     }, { timeout: 300000 });
 
-    const result = response.data.response;
-    console.log(result)
+    const result = {
+        response: response.data.response,
+        trace: response.trace
+    }
 
     return result;
 }
