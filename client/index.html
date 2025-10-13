@@ -132,10 +132,10 @@
                 const data = await response.json();
                 console.log(data)
                 conversationId = data?.conversationId;
-                console.log(conversationId)
                 // Log response
                 addLog('response', data.response);
                 addLog('trace', data.trace)
+                addLog('hash', data.hashMsg)
                 // Update machine state
                 if (data.response.turn !== undefined) {
                     turn = data.response.turn + 1;

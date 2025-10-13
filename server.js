@@ -156,9 +156,10 @@ app.post('/chat', async (req, res) => {
         );
 
 
-        console.log(`Turn ${satiJson.turn} | Chain: ${chainHash.substring(0, 8)}...`);
+        const hashMsg = `Chain: ${chainHash.substring(0, 8)}...`;
+        console.log(hashMsg)
         end(); // Record response time
-        res.json({ response: satiJson, conversationId, trace });
+        res.json({ response: satiJson, conversationId, trace, hashMsg });
     } catch (e) {
         end(); // Record failed request time
         console.error(e)
