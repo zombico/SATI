@@ -40,7 +40,10 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:3000';
+        const API_URL = window.location.origin.includes('runpod')
+            ? window.location.origin  // Use same origin as the page
+            : 'http://localhost:3000'; // Local development
+            
         let turn = 1;
         let machineState = {};
         let conversationId = null;
