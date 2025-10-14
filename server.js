@@ -120,13 +120,18 @@ const insertTurn = db.prepare(`
 app.post('/chat', async (req, res) => {
     const end = responseTime.startTimer();
     try {
-        let { prompt, turn, conversationId } = req.body;
+        let { prompt, turn, conversationId, includeHistory = true } = req.body;
         // Generate conversationId if new conversation
         if (!conversationId) {
             conversationId = crypto.randomUUID();
         }
-
-        const result = await assemblePrompt(config, prompt)
+        // Load conversation history if this is a continuing conversation
+        let conversationHistory = null;
+        if (conversationId && includeHistory) {
+            conversationHistory = getConversationHistory(conversationId);
+        }
+        console.log(conversationHistory)
+        const result = await assemblePrompt(config, prompt, conversationHistory)
         
         const satiJson = JSON.parse(result.response.trim())
         console.log(satiJson)
@@ -169,14 +174,23 @@ app.post('/chat', async (req, res) => {
 })
 
 // Generic context processor
-async function assemblePrompt(contextConfig, userPrompt) {
-
+async function assemblePrompt(contextConfig, userPrompt, conversationHistory = null) {
     const instructionsPath = path.join(__dirname, contextConfig.config.instructions)
     const instructions = fs.readFileSync(instructionsPath, "utf-8");
+
+    // Build conversation context if history exists
+    let conversationContext = '';
+    if (conversationHistory && conversationHistory.length > 0) {
+        conversationContext = '\n\nPrevious conversation:\n' + 
+            conversationHistory.map(turn => 
+                `Turn ${turn.turn}:\nUser: ${turn.user_prompt}\nAssistant: ${turn.llm_response}`
+            ).join('\n\n');
+    }
 
     // Build full prompt with instructions and protocol
     const fullPrompt = [
         instructions,
+        conversationContext,
         userPrompt
     ].filter(Boolean).join('\n\n'); // filter removes empty strings
     console.log(fullPrompt)
