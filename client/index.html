@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Client</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <!-- Left Side: Chat -->
     <div class="chat-container">
@@ -15,12 +17,7 @@
         <div class="messages" id="messages"></div>
         <div class="input-container">
             <div class="input-wrapper">
-                <input 
-                    type="text" 
-                    id="userInput" 
-                    placeholder="Type your message..."
-                    autocomplete="off"
-                />
+                <input type="text" id="userInput" placeholder="Type your message..." autocomplete="off" />
                 <button id="sendBtn">Send</button>
             </div>
         </div>
@@ -72,7 +69,7 @@
         }
 
         // Add log entry
-        function addLog(type, data) {
+        function addLog(type, data, conversationId) {
             const timestamp = new Date().toLocaleTimeString();
             const logDiv = document.createElement('div');
             logDiv.className = 'log-entry';
@@ -89,9 +86,22 @@
             const dataDiv = document.createElement('div');
             dataDiv.className = 'log-data';
             dataDiv.textContent = typeof data === 'object' ? JSON.stringify(data, null, 2) : data;
-
+            
             logDiv.appendChild(timestampDiv);
             logDiv.appendChild(dataDiv);
+
+            if (type === 'hash') {
+                const conversationIdDiv = document.createElement('div');
+                conversationIdDiv.className = 'log-data'
+                conversationIdDiv.textContent = `Conversation Id: ${conversationId}`
+                logDiv.appendChild(conversationIdDiv)
+                const verifyButton = document.createElement('a');
+                verifyButton.className = 'log-type verify'
+                verifyButton.textContent = 'Verify hash';
+                verifyButton.href = `/verify/${conversationId}`
+                verifyButton.target = "_blank"
+                logDiv.appendChild(verifyButton);
+            }
 
             logsDiv.insertBefore(logDiv, logsDiv.firstChild);
         }
@@ -121,27 +131,26 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ prompt, turn, conversationId })
-                    
+
                 });
-                
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const data = await response.json();
-                
                 conversationId = data?.conversationId;
                 // Log response
-                addLog('response', data.response);
-                addLog('trace', data.trace)
-                addLog('hash', data.hashMsg)
+                await addLog('response', data.response, conversationId);
+                await addLog('trace', data.trace, conversationId)
+                await addLog('hash', data.hashMsg, conversationId)
                 // Update machine state
                 if (data.response.turn !== undefined) {
                     turn = data.response.turn + 1;
                     machineState = data.response;  // Keep the entire response object
                     machineState.turn = turn;  // Update turn for next iteration
                 }
-                
+
                 // Add bot response to chat
                 if (data.response.answer) {
                     addMessage(data.response.answer, true);
@@ -171,8 +180,10 @@
             }
         });
 
+        addMessage("Hello! I'm here to help answer your questions about the Canadian Income Tax Act. If you have a question, feel free to ask.", isBot = true)
         // Focus input on load
         userInput.focus();
     </script>
 </body>
+
 </html>

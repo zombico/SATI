@@ -155,6 +155,10 @@
         .log-timestamp {
             color: #666;
             margin-bottom: 4px;
+            background: black;
+            display: flex;
+            justify-content: space-between;
+            padding: 6px;
         }
 
         .log-type {
@@ -166,13 +170,9 @@
             text-transform: uppercase;
         }
 
-        .log-type.request {
-            background: #1e3a8a;
-            color: #93c5fd;
-        }
-
-        .log-type.response {
-            background: #134e4a;
+        
+        .log-type.response, .log-type.request {
+            border: 1px solid #134e4a;
             color: #5eead4;
         }
 
@@ -180,11 +180,23 @@
             background: #7f1d1d;
             color: #fca5a5;
         }
+        .log-type.trace, .log-type.hash {
+            border: 1px solid darkslateblue;
+            color: slateblue;
+        }
+        .log-type.verify {
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+            margin-top: 1vh;
+            text-decoration: none;
+        }
 
         .log-data {
             margin-top: 8px;
             color: #a0a0a0;
             white-space: pre-wrap;
+            word-wrap: break-word;
         }
 
         .state-info {

@@ -156,7 +156,7 @@ app.post('/chat', async (req, res) => {
         );
 
 
-        const hashMsg = `Chain: ${chainHash.substring(0, 8)}...`;
+        const hashMsg = `Chain: ${chainHash}`;
         console.log(hashMsg)
         end(); // Record response time
         res.json({ response: satiJson, conversationId, trace, hashMsg });
