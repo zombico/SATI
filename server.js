@@ -128,7 +128,8 @@ app.post('/chat', async (req, res) => {
 
         const result = await assemblePrompt(config, prompt)
         
-        const satiJson = JSON.parse(result.response)
+        const satiJson = JSON.parse(result.response.trim())
+        console.log(satiJson)
         const trace = result.trace
         satiJson.turn = turn + 1
         // Record metrics
@@ -178,10 +179,11 @@ async function assemblePrompt(contextConfig, userPrompt) {
         instructions,
         userPrompt
     ].filter(Boolean).join('\n\n'); // filter removes empty strings
-    
+    console.log(fullPrompt)
     const response = await axios.post(`${LLAMA_HOST}/api/generate`, {
         model: MODEL_NAME,
         prompt: fullPrompt,
+        format: 'json',
         stream: false
     }, { timeout: 300000 });
 
@@ -270,15 +272,14 @@ app.get('/verify{/:conversationId}', (req, res) => {
     });
 });
 
-app.get('/history', (req, res) => {
-    const history = db.prepare('SELECT * FROM turns ORDER BY id ASC').all();
-    res.json(history);
-});
-
-app.get('/history/:turn', (req, res) => {
-    const turn = db.prepare('SELECT * FROM turns WHERE turn = ?').get(req.params.turn);
-    res.json(turn);
-});
+function getConversationHistory(conversationId, maxTurns = null) {
+    const query = maxTurns 
+        ? 'SELECT turn, user_prompt, llm_response FROM turns WHERE conversation_id = ? ORDER BY turn ASC LIMIT ?'
+        : 'SELECT turn, user_prompt, llm_response FROM turns WHERE conversation_id = ? ORDER BY turn ASC';
+    
+    const stmt = db.prepare(query);
+    return maxTurns ? stmt.all(conversationId, maxTurns) : stmt.all(conversationId);
+}
 
 app.get('/metrics', async (req, res) => {
     res.setHeader('Content-Type', register.contentType);
