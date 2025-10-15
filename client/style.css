@@ -24,6 +24,8 @@
             padding: 20px;
             border-bottom: 1px solid #333;
             background: #111;
+            display: flex;
+            justify-content: space-between;
         }
 
         .chat-header h2 {
@@ -38,6 +40,7 @@
             display: flex;
             flex-direction: column;
             gap: 16px;
+            background: gainsboro;
         }
 
         .message {
@@ -49,9 +52,10 @@
 
         .message.bot {
             align-self: flex-start;
-            background: #1a1a1a;
-            border: 1px solid #333;
+            background: snow;  
+            color: darkslategray;
         }
+        
 
         .message.user {
             align-self: flex-end;
@@ -73,8 +77,7 @@
 
         .input-container {
             padding: 20px;
-            border-top: 1px solid #333;
-            background: #111;
+            background: whitesmoke;
         }
 
         .input-wrapper {
@@ -85,10 +88,9 @@
         input {
             flex: 1;
             padding: 12px 16px;
-            border: 1px solid #333;
+            border: 1px solid gainsboro;
             border-radius: 6px;
-            background: #1a1a1a;
-            color: #e0e0e0;
+            background: snow;
             font-size: 14px;
         }
 
@@ -113,7 +115,7 @@
         }
 
         button:disabled {
-            background: #333;
+            background: dimgray;
             cursor: not-allowed;
         }
 

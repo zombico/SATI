@@ -4,15 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Client</title>
+    <title>Sovereign AI Chatbot Demo</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="/favicon.png">
 </head>
 
 <body>
     <!-- Left Side: Chat -->
     <div class="chat-container">
         <div class="chat-header">
-            <h2>Chat Interface</h2>
+            <h2>Income Tax Helper | Assistant Impôt</h2>
         </div>
         <div class="messages" id="messages"></div>
         <div class="input-container">
@@ -43,7 +44,7 @@
         const API_URL = window.location.origin.includes('runpod')
             ? window.location.origin  // Use same origin as the page
             : 'http://localhost:3000'; // Local development
-            
+
         let turn = 1;
         let machineState = {};
         let conversationId = null;
@@ -60,7 +61,7 @@
 
             const label = document.createElement('div');
             label.className = 'message-label';
-            label.textContent = isBot ? 'Bot' : 'You';
+            label.textContent = isBot ? 'Bot' : null;
 
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
