@@ -27,3 +27,10 @@ data/
 # Build outputs
 dist/
 build/
+
+## Dotnet Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+out/
