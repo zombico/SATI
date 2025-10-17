@@ -32,8 +32,13 @@ builder.Services.AddHttpClient<OllamaService>(client =>
 
 builder.Services.AddSingleton<PromptService>();
 builder.Services.AddSingleton<ConversationService>();
+builder.Services.AddSingleton<RagService>();
 
 var app = builder.Build();
+
+// get rag on startup
+var ragService = app.Services.GetRequiredService<RagService>();
+await ragService.InitializeAsync();
 
 // Configure middleware pipeline
 if (app.Environment.IsDevelopment())
