@@ -21,7 +21,7 @@ public class RagService
 
         _memory = new KernelMemoryBuilder()
             .WithOllamaTextEmbeddingGeneration(
-                modelName: "mistral",
+                modelName: "nomic-embed-text",
                 endpoint: "http://localhost:11434")
             .WithOllamaTextGeneration(
                 modelName: "mistral",

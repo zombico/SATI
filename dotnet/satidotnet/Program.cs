@@ -37,8 +37,8 @@ builder.Services.AddSingleton<RagService>();
 var app = builder.Build();
 
 // get rag on startup
-var ragService = app.Services.GetRequiredService<RagService>();
-await ragService.InitializeAsync();
+var ragServiceStartup = app.Services.GetRequiredService<RagService>();
+await ragServiceStartup.InitializeAsync();
 
 // Configure middleware pipeline
 if (app.Environment.IsDevelopment())
@@ -97,6 +97,7 @@ app.MapPost("/test-Ollama", async (OllamaService OllamaService, TestPromptReques
 app.MapPost("/chat", async (
     ChatRequest request,
     OllamaService llamaService,
+    RagService ragService,
     PromptService promptService,
     ConversationService conversationService,
     ILogger<Program> logger) =>
@@ -115,14 +116,45 @@ app.MapPost("/chat", async (
                 "Loaded {Count} previous turns for conversation {ConversationId}",
                 conversationHistory.Count, conversationId);
         }
+        
+        
+        // Search for relevant documents using RAG
+        string? ragContext = null;
+        DocumentSearchResult? searchResults = null;
+        
+        try
+        {
+            searchResults = await ragService.SearchDocumentsAsync(
+                query: request.Prompt,
+                maxResults: 3,
+                minRelevance: 0.3);
+
+            if (searchResults != null)
+            {
+                ragContext = searchResults.FormatAsContext();
+                logger.LogInformation(
+                    "Found {Count} relevant documents for RAG context",
+                    searchResults.TotalResults);
+            }
+            else
+            {
+                logger.LogInformation("No relevant documents found for query");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "RAG search failed, continuing without context");
+        }
+        
 
         // Assemble the full prompt with instructions and history
         var fullPrompt = await promptService.AssemblePromptAsync(
             request.Prompt,
-            conversationHistory);
+            conversationHistory,
+            ragContext);
 
         // Call LLM
-        var llmResult = await llamaService.GenerateAsync(fullPrompt, formatJson: true);
+        var llmResult = await llamaService.GenerateAsync(fullPrompt.FullPrompt, formatJson: true);
 
         // Parse the JSON response
         JsonDocument? satiJson = null;
@@ -146,7 +178,7 @@ app.MapPost("/chat", async (
             conversationId: conversationId,
             turn: nextTurn,
             userPrompt: request.Prompt,
-            fullPrompt: fullPrompt,
+            fullPrompt: fullPrompt.FullPrompt,
             llmResponse: llmResult.Response,
             machineState: llmResult.Response, // Store the full JSON as machine state
             ragContext: null

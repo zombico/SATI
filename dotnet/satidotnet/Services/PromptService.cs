@@ -34,12 +34,14 @@ public class PromptService
         _logger.LogInformation("Documents path exists: {Exists}", Directory.Exists(_documentsPath));
     }
 
-    public async Task<string> AssemblePromptAsync(
+    public async Task<PromptAssemblyResult> AssemblePromptAsync(
         string userPrompt, 
         List<ConversationTurn>? conversationHistory = null,
+        string? ragContext = null,
         CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("AssemblePromptAsync called with prompt: {Prompt}", userPrompt.Substring(0, Math.Min(50, userPrompt.Length)));
+        _logger.LogInformation("AssemblePromptAsync called with prompt: {Prompt}", 
+            userPrompt.Substring(0, Math.Min(50, userPrompt.Length)));
         
         // Load instructions (cached after first load)
         var instructions = await GetInstructionsAsync(cancellationToken);
@@ -59,19 +61,30 @@ public class PromptService
             promptParts.Add(instructions);
         }
 
+        // Add RAG context if available
+        if (!string.IsNullOrWhiteSpace(ragContext))
+        {
+            promptParts.Add("## Retrieved Document Context\n" + ragContext);
+            _logger.LogInformation("Added RAG context, length: {Length}", ragContext.Length);
+        }
+
         if (!string.IsNullOrWhiteSpace(conversationContext))
         {
             promptParts.Add(conversationContext);
         }
 
-        promptParts.Add(userPrompt);
+        promptParts.Add("## Current User Query\n" + userPrompt);
 
         var fullPrompt = string.Join("\n\n", promptParts);
         
         _logger.LogInformation("Assembled prompt with {PartCount} parts, total length: {Length}", 
             promptParts.Count, fullPrompt.Length);
 
-        return fullPrompt;
+        return new PromptAssemblyResult
+        {
+            FullPrompt = fullPrompt,
+            HadRagContext = !string.IsNullOrWhiteSpace(ragContext)
+        };
     }
 
     private async Task<string> GetInstructionsAsync(CancellationToken cancellationToken)
@@ -142,7 +155,7 @@ public class PromptService
         }
 
         var sb = new StringBuilder();
-        sb.AppendLine("\n\nPrevious conversation:");
+        sb.AppendLine("## Previous Conversation");
 
         foreach (var turn in conversationHistory)
         {
@@ -162,4 +175,10 @@ public class PromptService
         _cachedInstructions = null;
         _logger.LogInformation("Instructions cache cleared");
     }
+}
+
+public class PromptAssemblyResult
+{
+    public string FullPrompt { get; init; } = string.Empty;
+    public bool HadRagContext { get; init; }
 }
