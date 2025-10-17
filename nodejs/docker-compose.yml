@@ -1,0 +1,20 @@
+version: '3.8'
+services:
+  app:
+    build:
+      context: ..              # Use parent directory as build context
+      dockerfile: nodejs/Dockerfile  # Path to this folder's Dockerfile
+    image: sati-app:latest
+    ports:
+      - "3000:3000"
+      - "11434:11434"
+      - "8000:8000"
+    volumes:
+      # Mount Node.js code for live editing
+      - ./server.js:/app/server.js
+      - ./rag.js:/app/rag.js
+      
+      # Mount shared folders from parent directory
+      - ../client:/client
+      - ../config:/config
+      - ../documents:/documents

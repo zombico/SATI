@@ -5,7 +5,7 @@ const path = require('path');
 const pdfParse = require('pdf-parse');
 
 class SimpleRAG {
-  constructor(documentsPath = './documents') {
+  constructor(documentsPath = '../documents') {
     this.documentsPath = path.resolve(documentsPath); // Use absolute path
     this.documentChunks = [];
     this.isLoaded = false;

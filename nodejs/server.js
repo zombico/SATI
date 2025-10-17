@@ -3,14 +3,13 @@ const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
 const SimpleRAG = require('./rag');
-const config = require('./config/config.json');
+const config = require('../config/config.json');
 const fs = require('fs');
 const crypto = require('crypto');
 const Database = require('better-sqlite3');
 
 const app = express();
 const PORT = 3000;
-const promClient = require('prom-client');
 
 axios.interceptors.request.use(request => {
   const timestamp = new Date().toISOString();
@@ -56,35 +55,9 @@ axios.interceptors.response.use(
   }
 );
 
-// Create a Registry to register metrics
-const register = new promClient.Registry();
-
-// Collect default metrics (CPU, memory, event loop lag, etc.)
-promClient.collectDefaultMetrics({
-    register: register,
-    prefix: 'node_'
-});
-
-// Add custom metrics for your conversation system
-const conversationCounter = new promClient.Counter({
-    name: 'conversation_turns_total',
-    help: 'Total number of conversation turns processed',
-    labelNames: ['conversation_id']
-});
-
-const responseTime = new promClient.Histogram({
-    name: 'llm_response_duration_seconds',
-    help: 'Duration of LLM response generation',
-    buckets: [0.1, 0.5, 1, 2, 5, 10, 30]
-});
-
-register.registerMetric(conversationCounter);
-register.registerMetric(responseTime);
-
-
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, './client')));
+app.use(express.static(path.join(__dirname, '../client')));
 
 const LLAMA_HOST = 'http://localhost:11434';
 const MODEL_NAME = 'mistral';
