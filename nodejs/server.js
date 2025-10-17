@@ -155,10 +155,20 @@ async function assemblePrompt(contextConfig, userPrompt, conversationHistory = n
             ).join('\n\n');
     }
 
+    // do rag
+    let ragContext = '';
+    if (ragInstance && ragInstance.isLoaded) {
+        const searchResults = ragInstance.search(userPrompt, 3); // Get top 3 chunks
+        if (searchResults) {
+            ragContext = '\n\nRelevant information from documents:\n' + searchResults;
+        }
+    }
+
     // Build full prompt with instructions and protocol
     const fullPrompt = [
         instructions,
         conversationContext,
+        ragContext,
         userPrompt
     ].filter(Boolean).join('\n\n'); // filter removes empty strings
     console.log(fullPrompt)
