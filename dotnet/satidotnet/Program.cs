@@ -44,8 +44,22 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors();
 
-// Serve static files from wwwroot (equivalent to your client folder)
-app.UseStaticFiles();
+// Serve static files from external client folder
+var solutionRoot = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", ".."));
+var clientPath = Path.Combine(solutionRoot, "client");
+
+
+app.UseDefaultFiles(new DefaultFilesOptions
+{
+    FileProvider = new PhysicalFileProvider(clientPath),
+    RequestPath = ""
+});
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(clientPath),
+    RequestPath = ""
+});
 
 // Simple health check endpoint
 app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
