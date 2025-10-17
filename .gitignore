@@ -34,3 +34,5 @@ build/
 [Ll]og/
 [Ll]ogs/
 out/
+rag-documents/
+rag-storage/

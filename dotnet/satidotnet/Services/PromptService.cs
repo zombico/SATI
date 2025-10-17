@@ -56,11 +56,8 @@ public class PromptService
         // Assemble full prompt
         var promptParts = new List<string>();
         
-        if (!string.IsNullOrWhiteSpace(instructions))
-        {
-            promptParts.Add(instructions);
-        }
-
+        promptParts.Add("## Current User Query\n" + userPrompt);
+        
         // Add RAG context if available
         if (!string.IsNullOrWhiteSpace(ragContext))
         {
@@ -72,8 +69,11 @@ public class PromptService
         {
             promptParts.Add(conversationContext);
         }
-
-        promptParts.Add("## Current User Query\n" + userPrompt);
+        
+        if (!string.IsNullOrWhiteSpace(instructions))
+        {
+            promptParts.Add(instructions);
+        }
 
         var fullPrompt = string.Join("\n\n", promptParts);
         

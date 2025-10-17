@@ -88,7 +88,7 @@ public class RagService
             await _memory.ImportDocumentAsync(
                 pdfFile,
                 documentId: fileName,
-                tags: new TagCollection { { "type", "tax-document" }, { "format", "pdf" } },
+                tags: new TagCollection { { "format", "pdf" } },
                 cancellationToken: cancellationToken);
 
             _indexedDocuments.TryAdd(fileName, true);

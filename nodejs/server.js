@@ -166,10 +166,10 @@ async function assemblePrompt(contextConfig, userPrompt, conversationHistory = n
 
     // Build full prompt with instructions and protocol
     const fullPrompt = [
-        instructions,
-        conversationContext,
+        userPrompt,
         ragContext,
-        userPrompt
+        conversationContext,
+        instructions,
     ].filter(Boolean).join('\n\n'); // filter removes empty strings
     console.log(fullPrompt)
     const response = await axios.post(`${LLAMA_HOST}/api/generate`, {
