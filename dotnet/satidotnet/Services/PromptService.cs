@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using satidotnet.Models;
 
 namespace satidotnet.Services;
@@ -19,7 +20,7 @@ public class PromptService
         var projectRoot = Directory.GetCurrentDirectory();
         _logger.LogInformation("Project root: {ProjectRoot}", projectRoot);
         
-        _solutionRoot = Path.GetFullPath(Path.Combine(projectRoot, ".."));
+        _solutionRoot = Path.GetFullPath(Path.Combine(projectRoot, "..", ".."));
         _logger.LogInformation("Solution root: {SolutionRoot}", _solutionRoot);
         
         _configPath = Path.Combine(_solutionRoot, "config");
@@ -100,7 +101,8 @@ public class PromptService
             _logger.LogInformation("Config JSON content (first 200 chars): {Content}", 
                 configJson.Substring(0, Math.Min(200, configJson.Length)));
             
-            var config = System.Text.Json.JsonSerializer.Deserialize<ConfigFile>(configJson);
+            var config = System.Text.Json.JsonSerializer.Deserialize<ConfigFile>(configJson, 
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             if (config?.Config?.Instructions == null)
             {
@@ -110,7 +112,7 @@ public class PromptService
             }
 
             // Load instructions file (path is relative to solution root)
-            var instructionsPath = Path.GetFullPath(Path.Combine(_solutionRoot, config.Config.Instructions));
+            var instructionsPath = Path.GetFullPath(Path.Combine(_configPath, config.Config.Instructions));
             _logger.LogInformation("Looking for instructions file at: {Path}", instructionsPath);
             
             if (!File.Exists(instructionsPath))
