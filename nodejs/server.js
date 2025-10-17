@@ -91,7 +91,6 @@ const insertTurn = db.prepare(`
 `);
 
 app.post('/chat', async (req, res) => {
-    const end = responseTime.startTimer();
     try {
         let { prompt, turn, conversationId, includeHistory = true } = req.body;
         // Generate conversationId if new conversation
@@ -110,8 +109,7 @@ app.post('/chat', async (req, res) => {
         console.log(satiJson)
         const trace = result.trace
         satiJson.turn = turn + 1
-        // Record metrics
-        conversationCounter.inc({ conversation_id: conversationId });
+        
         // Generate hashes
         const contentHash = hashTurnContent(
             satiJson.turn,
@@ -136,11 +134,8 @@ app.post('/chat', async (req, res) => {
 
 
         const hashMsg = `Chain: ${chainHash}`;
-        console.log(hashMsg)
-        end(); // Record response time
         res.json({ response: satiJson, conversationId, trace, hashMsg });
     } catch (e) {
-        end(); // Record failed request time
         console.error(e)
         res.status(500).json({ error: 'Internal server error' });
     }
@@ -160,11 +155,21 @@ async function assemblePrompt(contextConfig, userPrompt, conversationHistory = n
             ).join('\n\n');
     }
 
+    // do rag
+    let ragContext = '';
+    if (ragInstance && ragInstance.isLoaded) {
+        const searchResults = ragInstance.search(userPrompt, 3); // Get top 3 chunks
+        if (searchResults) {
+            ragContext = '\n\nRelevant information from documents:\n' + searchResults;
+        }
+    }
+
     // Build full prompt with instructions and protocol
     const fullPrompt = [
-        instructions,
+        userPrompt,
+        ragContext,
         conversationContext,
-        userPrompt
+        instructions,
     ].filter(Boolean).join('\n\n'); // filter removes empty strings
     console.log(fullPrompt)
     const response = await axios.post(`${LLAMA_HOST}/api/generate`, {
