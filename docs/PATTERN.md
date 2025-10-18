@@ -10,11 +10,6 @@ Reference Implementation for NodeJs and Dotnet C#
 
 Utilizes the LLM's stateless nature. Cryptographically verifiable. Conversation history is restorable, and the source of inference. Create transparent, accountable AI interactions.
 
-## Philosophy
-SATI chatbots are constrained to specific tasks rather than general knowledge, giving them utility with clear boundaries and expectations. Through dynamic prompt generation, SATI narrows the probability field with constraints to reduce unhelpful outputs.
-
-REST is stateless. LLMs are stateless. SATI shows that capturing each interaction and controlling it step-by-step is how web developers can build with AI using tools native to them.
-
 **No vendor dependencies. No API keys. No black boxes.**
 
 ## REST-Inspired Design
@@ -24,6 +19,11 @@ SATI applies REST principles to AI conversations:
 - **Client-Server**: Clear separation between inference and storage
 - **Cacheable**: Responses are immutable and cryptographically signed
 - **Layered System**: RAG, history, and instructions compose cleanly
+
+## Philosophy
+SATI chatbots are constrained to specific tasks rather than general knowledge, giving them utility with clear boundaries and expectations. Through dynamic prompt generation, SATI narrows the probability field with constraints to reduce unhelpful outputs.
+
+REST is stateless. LLMs are stateless. SATI shows that capturing each interaction and controlling it step-by-step is how web developers can build with AI using tools native to them.
 
 ## Core Concept
 
