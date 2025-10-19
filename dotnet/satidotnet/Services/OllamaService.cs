@@ -1,44 +1,47 @@
+// Services/OllamaAdapter.cs
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using satidotnet.Models;
 
 namespace satidotnet.Services;
 
-public class OllamaService
+public class OllamaAdapter : ILLMAdapter
 {
     private readonly HttpClient _httpClient;
-    private readonly ILogger<OllamaService> _logger;
-    private readonly string _modelName;
+    private readonly ILogger<OllamaAdapter> _logger;
+    private readonly OllamaConfig _config;
 
-    public OllamaService(HttpClient httpClient, ILogger<OllamaService> logger)
+    public OllamaAdapter(HttpClient httpClient, ILogger<OllamaAdapter> logger, OllamaConfig config)
     {
         _httpClient = httpClient;
         _logger = logger;
-        _modelName = "mistral"; // Will be configured in Program.cs
+        _config = config;
     }
 
-    public async Task<OllamaResponse> GenerateAsync(string prompt, bool formatJson = true, CancellationToken cancellationToken = default)
+    public async Task<LLMResponse> GenerateAsync(string prompt, CancellationToken cancellationToken = default)
     {
         var requestTimestamp = DateTime.UtcNow;
         var stopwatch = Stopwatch.StartNew();
 
         _logger.LogInformation(
-            "[LOCAL LLM CALL] POST {BaseUrl}/api/generate | Timestamp: {Timestamp}",
+            "[LLM CALL] POST {BaseUrl}{Endpoint} | Timestamp: {Timestamp}",
             _httpClient.BaseAddress,
+            _config.Endpoint,
             requestTimestamp.ToString("o")
         );
 
-        var request = new OllamaGenerateRequest
+        var request = new
         {
-            Model = _modelName,
-            Prompt = prompt,
-            Format = formatJson ? "json" : null,
-            Stream = false
+            model = _config.Model,
+            prompt = prompt,
+            format = _config.Format,
+            stream = _config.Stream
         };
 
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("/api/generate", request, cancellationToken);
+            var response = await _httpClient.PostAsJsonAsync(_config.Endpoint, request, cancellationToken);
             response.EnsureSuccessStatusCode();
 
             var result = await response.Content.ReadFromJsonAsync<OllamaGenerateResponse>(cancellationToken);
@@ -51,15 +54,10 @@ public class OllamaService
                 ResponseTimestamp = DateTime.UtcNow,
                 DurationMs = stopwatch.ElapsedMilliseconds,
                 Method = "POST",
-                Url = $"{_httpClient.BaseAddress}api/generate"
+                Url = $"{_httpClient.BaseAddress}{_config.Endpoint}"
             };
 
-            _logger.LogInformation(
-                "LLM response received in {Duration}ms",
-                stopwatch.ElapsedMilliseconds
-            );
-
-            return new OllamaResponse
+            return new LLMResponse
             {
                 Response = result?.Response ?? string.Empty,
                 Trace = trace
@@ -68,14 +66,9 @@ public class OllamaService
         catch (HttpRequestException ex)
         {
             stopwatch.Stop();
-            
-            _logger.LogError(
-                ex,
-                "LLM request failed after {Duration}ms",
-                stopwatch.ElapsedMilliseconds
-            );
+            _logger.LogError(ex, "LLM request failed after {Duration}ms", stopwatch.ElapsedMilliseconds);
 
-            throw new OllamaServiceException("Failed to communicate with Ollama service", ex)
+            throw new LLMAdapterException("Failed to communicate with Ollama service", ex)
             {
                 Trace = new RequestTrace
                 {
@@ -83,7 +76,7 @@ public class OllamaService
                     ResponseTimestamp = DateTime.UtcNow,
                     DurationMs = stopwatch.ElapsedMilliseconds,
                     Method = "POST",
-                    Url = $"{_httpClient.BaseAddress}api/generate",
+                    Url = $"{_httpClient.BaseAddress}{_config.Endpoint}",
                     Error = true
                 }
             };
@@ -91,55 +84,8 @@ public class OllamaService
     }
 }
 
-// Request/Response Models
-public class OllamaGenerateRequest
-{
-    [JsonPropertyName("model")]
-    public string Model { get; set; } = string.Empty;
-
-    [JsonPropertyName("prompt")]
-    public string Prompt { get; set; } = string.Empty;
-
-    [JsonPropertyName("format")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? Format { get; set; }
-
-    [JsonPropertyName("stream")]
-    public bool Stream { get; set; }
-}
-
 public class OllamaGenerateResponse
 {
     [JsonPropertyName("response")]
     public string Response { get; set; } = string.Empty;
-
-    [JsonPropertyName("model")]
-    public string? Model { get; set; }
-
-    [JsonPropertyName("done")]
-    public bool Done { get; set; }
-}
-
-public class OllamaResponse
-{
-    public string Response { get; set; } = string.Empty;
-    public RequestTrace Trace { get; set; } = new();
-}
-
-public class RequestTrace
-{
-    public DateTime RequestTimestamp { get; set; }
-    public DateTime ResponseTimestamp { get; set; }
-    public long DurationMs { get; set; }
-    public string Method { get; set; } = string.Empty;
-    public string Url { get; set; } = string.Empty;
-    public bool Error { get; set; }
-}
-
-public class OllamaServiceException : Exception
-{
-    public RequestTrace? Trace { get; set; }
-
-    public OllamaServiceException(string message) : base(message) { }
-    public OllamaServiceException(string message, Exception innerException) : base(message, innerException) { }
 }

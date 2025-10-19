@@ -5,7 +5,7 @@
         "name": "Canadian Privacy Act Helper Bot"
     },
     "llm": {
-        "provider": "anthropic",
+        "provider": "ollama",
         "ollama": {
             "host": "http://localhost:11434",
             "model": "mistral",

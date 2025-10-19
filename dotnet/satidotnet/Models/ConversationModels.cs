@@ -35,6 +35,7 @@ public class VerificationResult
 public class ConfigFile
 {
     public ConfigSection? Config { get; set; }
+    public LLMConfiguration? LLM { get; set; } 
 }
 
 public class ConfigSection
@@ -43,3 +44,18 @@ public class ConfigSection
     public string? DocumentsPath { get; set; }
 }
 
+public class LLMConfiguration
+{
+    public string Provider { get; set; } = "ollama";
+    public OllamaConfig? Ollama { get; set; }
+}
+
+public class OllamaConfig
+{
+    public string Host { get; set; } = string.Empty;
+    public string Model { get; set; } = string.Empty;
+    public string Endpoint { get; set; } = string.Empty;
+    public int Timeout { get; set; }
+    public string Format { get; set; } = string.Empty;
+    public bool Stream { get; set; }
+}

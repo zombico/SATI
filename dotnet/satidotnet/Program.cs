@@ -8,11 +8,9 @@ using satidotnet.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure services
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add CORS
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -23,13 +21,11 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Register HttpClient for OllamaService
-builder.Services.AddHttpClient<OllamaService>(client =>
-{
-    client.BaseAddress = new Uri("http://localhost:11434");
-    client.Timeout = TimeSpan.FromMinutes(5);
-});
+// Just add HttpClientFactory - adapters are created on-demand
+builder.Services.AddHttpClient();
 
+// Register services - simple!
+builder.Services.AddSingleton<LLMService>();
 builder.Services.AddSingleton<PromptService>();
 builder.Services.AddSingleton<ConversationService>();
 builder.Services.AddSingleton<RagService>();
@@ -53,7 +49,6 @@ app.UseCors();
 var solutionRoot = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", ".."));
 var clientPath = Path.Combine(solutionRoot, "client");
 
-
 app.UseDefaultFiles(new DefaultFilesOptions
 {
     FileProvider = new PhysicalFileProvider(clientPath),
@@ -71,32 +66,10 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = Dat
     .WithName("HealthCheck")
     .WithOpenApi();
 
-// Test endpoint for OllamaService
-app.MapPost("/test-Ollama", async (OllamaService OllamaService, TestPromptRequest request) =>
-{
-    try
-    {
-        var response = await OllamaService.GenerateAsync(request.Prompt, formatJson: request.FormatJson);
-        return Results.Ok(new
-        {
-            response = response.Response,
-            trace = response.Trace
-        });
-    }
-    catch (OllamaServiceException ex)
-    {
-        return Results.Problem(
-            title: "LLM Service Error",
-            detail: ex.Message,
-            statusCode: 500
-        );
-    }
-});
-
 // Main chat endpoint - orchestrates everything
 app.MapPost("/chat", async (
     ChatRequest request,
-    OllamaService llamaService,
+    LLMService llmService,  // ← Changed from OllamaAdapter
     RagService ragService,
     PromptService promptService,
     ConversationService conversationService,
@@ -116,7 +89,6 @@ app.MapPost("/chat", async (
                 "Loaded {Count} previous turns for conversation {ConversationId}",
                 conversationHistory.Count, conversationId);
         }
-        
         
         // Search for relevant documents using RAG
         string? ragContext = null;
@@ -145,7 +117,6 @@ app.MapPost("/chat", async (
         {
             logger.LogWarning(ex, "RAG search failed, continuing without context");
         }
-        
 
         // Assemble the full prompt with instructions and history
         var fullPrompt = await promptService.AssemblePromptAsync(
@@ -153,8 +124,8 @@ app.MapPost("/chat", async (
             conversationHistory,
             ragContext);
 
-        // Call LLM
-        var llmResult = await llamaService.GenerateAsync(fullPrompt.FullPrompt, formatJson: true);
+        // Call LLM - now using LLMService which handles provider selection
+        var llmResult = await llmService.GenerateAsync(fullPrompt.FullPrompt);  // ← Removed formatJson parameter
 
         // Parse the JSON response
         JsonDocument? satiJson = null;
@@ -180,8 +151,8 @@ app.MapPost("/chat", async (
             userPrompt: request.Prompt,
             fullPrompt: fullPrompt.FullPrompt,
             llmResponse: llmResult.Response,
-            machineState: llmResult.Response, // Store the full JSON as machine state
-            ragContext: null
+            machineState: llmResult.Response,
+            ragContext: ragContext  // ← Store RAG context if you want
         );
 
         // Get the chain hash for this turn
@@ -198,7 +169,7 @@ app.MapPost("/chat", async (
             HashMsg = hashMsg
         });
     }
-    catch (OllamaServiceException ex)
+    catch (LLMAdapterException ex)  // ← Changed exception type
     {
         logger.LogError(ex, "LLM service error");
         return Results.Problem(
@@ -220,12 +191,12 @@ app.MapPost("/chat", async (
 
 // Verify chain integrity
 app.MapGet("/verify/{conversationId?}", (string? conversationId, ConversationService conversationService) =>
-    {
-        var result = conversationService.VerifyChain(conversationId);
-        return Results.Ok(result);
-    })
-    .WithName("VerifyChain")
-    .WithOpenApi();
+{
+    var result = conversationService.VerifyChain(conversationId);
+    return Results.Ok(result);
+})
+.WithName("VerifyChain")
+.WithOpenApi();
 
 // Handle graceful shutdown
 var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
@@ -238,7 +209,7 @@ lifetime.ApplicationStopping.Register(() =>
 
 app.Run();
 
-// Request model for testing
+// Request models
 record TestPromptRequest(string Prompt, bool FormatJson = false);
 
 record ChatRequest
