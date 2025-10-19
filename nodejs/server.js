@@ -1,5 +1,4 @@
 const express = require('express');
-const axios = require('axios');
 const cors = require('cors');
 const path = require('path');
 const SimpleRAG = require('./rag');
@@ -7,62 +6,17 @@ const config = require('../config/config.json');
 const fs = require('fs');
 const crypto = require('crypto');
 const Database = require('better-sqlite3');
+const { createLLMClient } = require('./llm-client');
 
 const app = express();
 const PORT = 3000;
-
-axios.interceptors.request.use(request => {
-  const timestamp = new Date().toISOString();
-  request.meta = request.meta || {};
-  request.meta.requestTimestamp = timestamp;
-  request.meta.requestStartedAt = Date.now();
-  
-  console.log(`[LOCAL LLM CALL] ${request.method.toUpperCase()} ${request.baseURL || ''}${request.url} | Timestamp: ${timestamp}`);
-  return request;
-});
-
-// Response interceptor: Calculate duration and attach metadata
-axios.interceptors.response.use(
-  response => {
-    const endTime = Date.now();
-    const duration = endTime - response.config.meta.requestStartedAt;
-    
-    response.trace = {
-      requestTimestamp: response.config.meta.requestTimestamp,
-      responseTimestamp: new Date().toISOString(),
-      durationMs: duration,
-      method: response.config.method.toUpperCase(),
-      url: `${response.config.baseURL || ''}${response.config.url}`
-    };
-    
-    return response;
-  },
-  error => {
-    if (error.config && error.config.meta) {
-      const endTime = Date.now();
-      const duration = endTime - error.config.meta.requestStartedAt;
-      
-      error.trace = {
-        requestTimestamp: error.config.meta.requestTimestamp,
-        responseTimestamp: new Date().toISOString(),
-        durationMs: duration,
-        method: error.config.method.toUpperCase(),
-        url: `${error.config.baseURL || ''}${error.config.url}`,
-        error: true
-      };
-    }
-    throw error;
-  }
-);
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../client')));
 
-const LLAMA_HOST = 'http://localhost:11434';
-const MODEL_NAME = 'mistral';
-
 let ragInstance = null;
+let llmClient = null;
 
 // Initialize database
 const db = new Database('./conversation.db');
@@ -104,7 +58,7 @@ app.post('/chat', async (req, res) => {
         }
         console.log(conversationHistory)
         const result = await assemblePrompt(config, prompt, conversationHistory)
-        
+        console.log(result)
         const satiJson = JSON.parse(result.response.trim())
         console.log(satiJson)
         const trace = result.trace
@@ -121,7 +75,7 @@ app.post('/chat', async (req, res) => {
         const chainHash = createChainHash(contentHash, previousChainHash);
 
         insertTurn.run(
-            conversationId,        // NEW: First parameter
+            conversationId,
             satiJson.turn,
             prompt,
             null,
@@ -131,7 +85,6 @@ app.post('/chat', async (req, res) => {
             contentHash,
             chainHash
         );
-
 
         const hashMsg = `Chain: ${chainHash}`;
         res.json({ response: satiJson, conversationId, trace, hashMsg });
@@ -170,20 +123,12 @@ async function assemblePrompt(contextConfig, userPrompt, conversationHistory = n
         ragContext,
         conversationContext,
         instructions,
-    ].filter(Boolean).join('\n\n'); // filter removes empty strings
+    ].filter(Boolean).join('\n\n').trim(); // filter removes empty strings
+    
     console.log(fullPrompt)
-    const response = await axios.post(`${LLAMA_HOST}/api/generate`, {
-        model: MODEL_NAME,
-        prompt: fullPrompt,
-        format: 'json',
-        stream: false
-    }, { timeout: 300000 });
-
-    const result = {
-        response: response.data.response,
-        trace: response.trace
-    }
-
+    
+    // Use LLM client instead of direct axios call
+    const result = await llmClient.generate(fullPrompt);
     return result;
 }
 
@@ -212,19 +157,17 @@ function getLastChainHash(conversationId) {
     return lastTurn ? lastTurn.chain_hash : null;
 }
 
-app.get('/verify{/:conversationId}', (req, res) => {
-    const { conversationId } = req.params;
-    
-    // Build query based on whether we're verifying specific conversation or all
+// Shared verification logic
+function verifyConversation(conversationId = null) {
     const query = conversationId 
         ? 'SELECT id, turn, conversation_id, user_prompt, llm_response, machine_state, content_hash, chain_hash FROM turns WHERE conversation_id = ? ORDER BY turn ASC'
         : 'SELECT id, turn, conversation_id, user_prompt, llm_response, machine_state, content_hash, chain_hash FROM turns ORDER BY conversation_id, turn ASC';
     
-    const stmt = conversationId ? db.prepare(query) : db.prepare(query);
+    const stmt = db.prepare(query);
     const turns = conversationId ? stmt.all(conversationId) : stmt.all();
 
     if (turns.length === 0) {
-        return res.json({ valid: true, totalTurns: 0, message: 'No turns to verify' });
+        return { valid: true, totalTurns: 0, message: 'No turns to verify' };
     }
 
     // Track chain per conversation
@@ -256,12 +199,23 @@ app.get('/verify{/:conversationId}', (req, res) => {
         chainMap.set(turn.conversation_id, turn.chain_hash);
     }
 
-    res.json({
+    return {
         valid: isValid,
         totalTurns: turns.length,
         invalidTurns: invalidCount,
         conversationsVerified: chainMap.size
-    });
+    };
+}
+
+// Verify all conversations
+app.get('/verify', (req, res) => {
+    res.json(verifyConversation());
+});
+
+// Verify specific conversation
+app.get('/verify/:conversationId', (req, res) => {
+    const { conversationId } = req.params;
+    res.json(verifyConversation(conversationId));
 });
 
 function getConversationHistory(conversationId, maxTurns = null) {
@@ -274,15 +228,20 @@ function getConversationHistory(conversationId, maxTurns = null) {
 }
 
 app.get('/metrics', async (req, res) => {
-    res.setHeader('Content-Type', register.contentType);
-    res.send(await register.metrics());
+    res.setHeader('Content-Type', 'text/plain');
+    res.send('Metrics endpoint - implement as needed');
 });
 
-
 app.listen(PORT, async () => {
+    // Initialize LLM client from config
+    llmClient = createLLMClient(config);
+    console.log(`LLM Provider: ${config.llm.provider}`);
+    
+    // Initialize RAG
     const documentsPath = path.join(__dirname, config.config.documentsPath);
     ragInstance = new SimpleRAG(documentsPath);
     await ragInstance.initialize();
+    
     console.log(`Server running on http://localhost:${PORT}`);
     console.log(`Database initialized: conversation.db`);
 });

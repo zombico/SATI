@@ -3,5 +3,31 @@
         "documentsPath": "../documents",
         "instructions": "../config/instructions.txt",
         "name": "Canadian Privacy Act Helper Bot"
+    },
+    "llm": {
+        "provider": "anthropic",
+        "ollama": {
+            "host": "http://localhost:11434",
+            "model": "mistral",
+            "endpoint": "/api/generate",
+            "timeout": 300000,
+            "format": "json",
+            "stream": false
+        },
+        "openai": {
+            "apiKey": "${OPENAI_API_KEY}",
+            "model": "gpt-4",
+            "baseURL": "https://api.openai.com/v1",
+            "endpoint": "/chat/completions",
+            "timeout": 300000
+        },
+        "anthropic": {
+            "apiKey": "",
+            "model": "claude-sonnet-4-5-20250929",
+            "baseURL": "https://api.anthropic.com/v1",
+            "endpoint": "/messages",
+            "timeout": 300000,
+            "maxTokens": 4096
+        }
     }
 }
