@@ -1,144 +1,113 @@
-# SATI
-## A REST-inspired AI pattern - For Developers Everywhere
+# SATI - Stateless Audit Trail Inference
+### HTTP-Native middleware for any LLM
 
-Observable, verifiable AI conversation. Fully headless. Zero API costs. No training. No fine-tuning.
+LLMs are stateless. REST is stateless. SATI is the bridge.
+
 
 ![Screenshot description](docs/headerscreen.png)
 
-## Quick Start - Vanilla JavaScript
+## Quick Start 
 
+**Prerequisites (both implementations):**
+- [Ollama](https://ollama.ai) running locally 
+- Mistral model: `ollama pull mistral`
+
+### Node.js Implementation
 ```bash
 cd nodejs
 npm install
 node server.js
 ```
-## .NET
+### .NET Implementation
 
 ```bash
+ollama pull nomic-embed-text 
 cd dotnet
-Open the solution with Visual Studio or Rider and press F5.
+dotnet run
 ```
+Or open the solution with Visual Studio or Rider.
 
-That's it. Your SATI server will be running on http://localhost:3000 
-with the demo UI for both Node.js and .NET  (same port for UI consistency)
+Both implementations run on `http://localhost:3000` with identical debugger UI.
 
 ## What is SATI
-**SATI** (Stateless Audit Trail Inference) is a pattern for building verifiable AI conversations using REST principles. Every conversation turn is cryptographically chained, creating an immutable audit trail.
+SATI is HTTP middleware for LLMs that works with any provider—local or cloud. Observe, audit, and control every interaction using the same patterns you already use for REST APIs.
 
-- [Architecture & Pattern Details](./docs/pattern.md)
+It is compatible with both cloud API models and local models.
 
-## Who SATI Is For
+**Works with any LLM backend:** OpenAI, Anthropic, Azure OpenAI, Ollama, or your own infrastructure. Switch providers without changing your middleware layer.
 
-**Web developers building AI features** - You know Express or ASP.NET. You understand REST and databases. AI is now just another resource to provision.
+Instead of managing stateful sessions, it uses six core abstractions:
+- Observable Gateway → Intercept all calls
+- Stateless Turns → No session state
+- Context Injection → RAG, history, instructions
+- Prompt Assembly → Dynamic composition
+- Cryptographic Audit → Tamper-evident chain
+- Reconstructed State → Events, not objects
 
-**Compliance-minded teams** - Regulated industries, or anywhere AI accountability matters.
+**The pattern is provider-agnostic.** Whether you're calling localhost or a cloud API, the middleware abstractions stay the same.
 
-**Rapid prototypers** - Use Node.js/Express to ship AI features in hours, not weeks.
+## Swap LLM Backends
 
-**Enterprise integrations** - Use .NET for production-grade systems with familiar tooling.
+The demo uses Ollama, but SATI's middleware pattern works with any LLM provider.
 
-**Cost-conscious teams** - Eliminate per-request API charges and unpredictable scaling costs.
+**Supported backends:**
+- **Local models:** Ollama, LM Studio, vLLM, llama.cpp
+- **Cloud APIs:** OpenAI, Anthropic Claude, Google Gemini
+- **Enterprise:** Azure OpenAI, AWS Bedrock, GCP Vertex AI
+- **Custom:** Your own inference infrastructure
 
-**Sovereignty-conscious builders** - No API keys. No vendor lock-in. No internet? No problem. Your infrastructure, your control.
+## Why SATI
 
+Most LLM integrations are black boxes tightly coupled to one provider. SATI treats LLMs like HTTP APIs.
 
-## What You Get
+**Core Benefits:**
+- **Provider independence** - Switch from OpenAI to Anthropic to local models by without refactoring
+- **Observability as infrastructure** - Monitor LLMs like you monitor REST APIs
+- **Compliance-ready audit trails** - Cryptographic chain proves what the AI said (legal/medical/financial)
+- **Stateless by design** - Replay any turn with full context, no session state to manage.
+- **Prompt injection resilience** - Instructions regenerated per turn, not hijacked
 
-- ✅ **Zero API costs** - No per-request charges, no usage limits, no surprise bills
-- ✅ **Build faster than ever** - No training, no fine-tuning, no waiting
-- ✅ **Harness your local model** - Runs on your machine via Ollama/Mistral
-- ✅ **Demo UI included** - Test and debug your implementation
-- ✅ **Tamper-proof logs** - Every conversation cryptographically chained
-- ✅ **RAG-ready** - Drop documents in, get context-aware responses
-- ✅ **Verifiable** - Built-in integrity checking
+**Who This Is For:**
 
+*Developers prototyping AI features* - Ship in hours using local models, migrate to cloud APIs later without changing middleware.
 
-## Why SATI?
+*Platform teams* - Vendor-neutral telemetry, request/response tracing, and policy enforcement at the HTTP layer.
 
-Most chatbots are black boxes. SATI gives you:
-- **Proof of what the AI said** (cryptographic hashes)
-- **When it said it** (timestamps)
-- **What context it had** (full prompt reconstruction)
-- **Unalterable history** (blockchain-style chaining)
+*Regulated industries* - Tamper-evident audit logs work identically whether you're using Azure, OpenAI or self-hosted models.
 
-Usable in domains where AI accountability matters.
+## Understanding the Code
 
-## Prerequisites
+**Want to understand how it works?** Paste [server.js](./nodejs/server.js) into Claude and ask:
 
-**Both versions:**
-- [Ollama](https://ollama.ai/) running locally with Mistral model
+- "How does this work?"
+- "What are the different components?"
+- "How is conversation history saved?"
+- "How is this different from a framework?"
 
-**Node.js version:**
-- Node.js 16+
+Full technical deep-dive: [pattern.md](./docs/pattern.md)
 
-**.NET version:**
-- .NET 9.0 SDK or later
-- Ollama with `nomic-embed-text` model for embeddings
+## This is a Pattern, Not a Product
 
-## Features
+SATI demonstrates that LLM middleware doesn't need complex frameworks or vendor SDKs.
 
-### Cryptographic Chain
-Every conversation turn is hashed and linked to the previous turn. Tampering breaks the chain.
+The Node.js implementation uses minimal libraries. The .NET version is similar. Both use only:
+- HTTP clients
+- SQLite
+- Standard middleware patterns
 
-### Conversation Persistence
-Multiple conversations tracked with unique IDs. Full history reconstruction.
+**This is intentionally minimal.** Other capable engineers could extend this into:
+- Distributed tracing with OpenTelemetry
+- Wrap it in Azure Entra ID 
+- Policy enforcement layers
+- More secure hashing
+- Multi-tenant isolation
+- Advanced RAG pipelines
 
-### Document RAG
-Drop text files in your documents folder, get contextual answers automatically.
+## How This Was Built
 
-### Verification Endpoint
-`GET /verify/:conversationId` - Prove conversation integrity anytime.
+This pattern emerged through iterative development with Claude (Anthropic) as a coding assistant. The architectural decisions, implementation choices, and pattern validation were human-driven. Claude accelerated code generation and helped refine documentation.
 
-## Caveats
-
-- Quality outputs require well-crafted prompts and instructions
-- Performance is subject to hardware
-- Local model capability and inference may vary
-- While resilient, it is not fully hardened against Prompt Injection
-- Current state shared here is a reference implementation - not hardened for production use
-
-## Deployment Considerations
-
-**GPU Requirements**: Local LLMs need GPU acceleration or unified memory for acceptable performance.
-**Known Working Platforms**:
-- ✅ M-series Macs (unified memory)
-- ✅ Runpod GPU instances
-- ✅ Local machines with NVIDIA GPUs
-
-**Will Be Slow**:
-- ⚠️ Standard cloud VMs without GPU
-- ⚠️ Docker without GPU passthrough
-- ⚠️ CPU-only deployments
-
-## Support
-
-This repo demonstrates the pattern and provides guidance on understanding it.
-Its sole purpose is to point out the way.
-This is NOT a maintained framework.
-Do what you will. Fork it, clone it, and customize to your use case.
-Make it better. Make it robust. Ship AI features faster than you thought possible.
+The dual implementation (Node.js and .NET) was deliberately done to prove the abstractions are language-agnostic and not artifacts of a single coding session.
 
 ## License
-
 MIT
-
-
-## Technical Stack
-
-### Node.js Implementation
-- **Express.js**: API server
-- **Axios**: HTTP client with request/response tracing
-- **better-sqlite3**: Embedded database for audit trail
-- **Local LLM**: Ollama/Mistral for inference
-- **Crypto**: Node.js built-in for SHA-256 hashing
-
-### .NET Implementation
-- **ASP.NET Core**: Web API
-- **Entity Framework Core**: ORM and database management
-- **SQLite**: Embedded database for audit trail
-- **OllamaSharp**: Local LLM inference
-- **System.Security.Cryptography**: SHA-256 hashing
-- **Semantic Kernel/Microsoft.SemanticKernel**: LLM orchestration (optional)
-
-### Developed with
-M1 Macbook Pro 64GB

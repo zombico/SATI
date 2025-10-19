@@ -1,27 +1,5 @@
-# SATI 
-## A REST-inspired Pattern for Verifiable AI Conversations
-Reference Implementation for NodeJs and Dotnet C#
-
-## **SATI** stands for 
-- **S**tateless  
-- **A**udit    
-- **T**rail  
-- **I**nference 
-
-Utilizes the LLM's stateless nature. Cryptographically verifiable. Conversation history is restorable, and the source of inference. Create transparent, accountable AI interactions.
-
-**No vendor dependencies. No API keys. No black boxes.**
-
-## REST-Inspired Design
-SATI applies REST principles to AI conversations:
-- **Statelessness**: Each request contains all necessary context
-- **Uniform Interface**: Consistent pattern across all interactions  
-- **Client-Server**: Clear separation between inference and storage
-- **Cacheable**: Responses are immutable and cryptographically signed
-- **Layered System**: RAG, history, and instructions compose cleanly
-
-## Philosophy
-SATI chatbots are constrained to specific tasks rather than general knowledge, giving them utility with clear boundaries and expectations. Through dynamic prompt generation, SATI narrows the probability field with constraints to reduce unhelpful outputs.
+# SATI - Stateless Audit Trail Inference
+## Explanation of the HTTP-Native LLM Middleware Pattern
 
 REST is stateless. LLMs are stateless. SATI shows that capturing each interaction and controlling it step-by-step is how web developers can build with AI using tools native to them.
 
@@ -31,31 +9,142 @@ SATI addresses a fundamental challenge in AI systems: **how do you prove what an
 
 Traditional chatbots maintain state in memory or databases that can be modified. SATI takes a different approach by treating each conversation turn as an immutable record in a cryptographic chain, similar to blockchain principles but optimized for conversational AI.
 
-## Key Components
-
-### 1. **Stateless Inference**
-- Each LLM call is self-contained with all necessary context
-- No hidden state between turns
-- Full prompt assembly includes: user input, RAG context, conversation history, and instructions
-
-### 2. **Cryptographic Chain**
-- **Content Hash**: SHA-256 hash of each turn's complete content (user prompt, LLM response, machine state)
-- **Chain Hash**: Links current turn to previous turn, creating an unbreakable chain
-- Any modification to historical turns breaks the chain
-
-### 3. **Audit Trail**
-- Every conversation turn is permanently recorded
-- Complete reproducibility: stored prompts and responses
-- Timestamp tracking for temporal verification
-- Multi-conversation support with unique identifiers
-
-## Powered by JSON
+## Generate JSON with Prompts
 
 A key aspect of SATI is that **prompts become first-class citizens**. Programmable behavior is accessible via prompts, allowing you to shape LLM outputs into specific JSON structures based on user input.
 
 This unlocks significant potential: LLMs become structured endpoints that can output the exact JSON needed to drive downstream operations. No parsing unstructured text—just reliable, typed responses.
 
-## How It Works
+
+# SATI: 6 Core Abstractions
+
+## Request Flow (Vertical)
+```
+                    ┌──────────────┐
+                    │     User     │
+                    │   Request    │
+                    └──────┬───────┘
+                           ↓
+            ┌──────────────────────────────┐
+            │   ① Observable LLM Gateway   │
+            │                              │
+            │   • Intercept all calls      │
+            │   • Add timing & tracing     │
+            │   • Log metadata             │
+            └──────────────┬───────────────┘
+                           ↓
+            ┌──────────────────────────────┐
+            │   ② Stateless Turn Mgmt      │
+            │                              │
+            │   • Self-contained turn      │
+            │   • No session state         │
+            │   • Everything reconstructed │
+            └──────────────┬───────────────┘
+                           ↓
+    ┌──────────┐  ┌──────────────────────────────┐
+    │   RAG    │→ │   ③ Context Injection        │
+    │   Docs   │  │                              │
+    └──────────┘  │   • User input               │
+                  │   • RAG knowledge            │
+    ┌──────────┐  │   • Conversation history     │
+    │Instructions│→│   • System instructions      │
+    │  (fresh) │  │                              │
+    └──────────┘  └──────────────┬───────────────┘
+                           ↓
+            ┌──────────────────────────────┐
+            │   ④ Prompt Assembly          │
+            │                              │
+            │   • Compose all sources      │
+            │   • User + RAG + History     │
+            │   • + Instructions           │
+            │   • Generate full prompt     │
+            └──────────────┬───────────────┘
+                           ↓
+                    ┌──────────┐
+                    │   LLM    │
+                    │ (Local)  │
+                    └─────┬────┘
+                          ↓
+            ┌──────────────────────────────┐
+            │   ⑤ Cryptographic Audit      │
+            │                              │
+            │   • Hash turn content        │
+            │   • Chain to previous hash   │
+            │   • Tamper detection         │
+            └──────────────┬───────────────┘
+                           ↓
+            ┌──────────────────────────────┐
+            │   ⑥ Reconstructed State      │
+            │                              │
+            │   • Store in SQLite          │
+            │   • Immutable turns          │
+            │   • State = view over events │
+            └──────────────┬───────────────┘
+                           ↓
+                    ┌──────────────┐
+                    │   Response   │
+                    │  + Metadata  │
+                    └──────┬───────┘
+                           │
+                           └────────┐
+                                    ↓
+        History reconstructed ──────┘
+        (loops back to ③)
+```
+
+## The 6 Abstractions Explained
+
+### ① Observable LLM Gateway
+**What:** Intercepts all LLM communication  
+**Why:** Provides visibility into every interaction  
+**How:** Axios interceptors add timing, tracing, and metadata to requests/responses
+
+### ② Stateless Turn Management
+**What:** Each interaction is self-contained  
+**Why:** No session state means predictable, reproducible behavior  
+**How:** Turn carries everything needed; state reconstructed from storage
+
+### ③ Context Injection Points
+**What:** Multiple sources feed into the prompt  
+**Why:** Separates concerns—user input, knowledge, history, behavior  
+**How:** RAG documents, instructions, and history injected independently
+
+### ④ Prompt Assembly Pipeline
+**What:** Dynamic composition from all sources  
+**Why:** Instructions regenerated per turn = resilient to hijacking  
+**How:** Concatenates user + RAG + history + instructions into full prompt
+
+### ⑤ Cryptographic Audit Trail
+**What:** Tamper-evident chain of conversation turns  
+**Why:** Proves what was said, when, and in what order  
+**How:** SHA-256 content hash + chain hash linking to previous turn
+
+### ⑥ Conversation as Reconstructed State
+**What:** State exists as ordered turns in database  
+**Why:** Immutable events > mutable objects  
+**How:** Query database to reconstruct conversation at any point
+
+
+## How They Work Together
+
+1. **Request enters** through Observable Gateway (①)
+2. **Turn created** with no session state (②)
+3. **Context gathered** from RAG, history, instructions (③)
+4. **Prompt assembled** dynamically (④)
+5. **LLM responds** (external)
+6. **Response hashed** and chained (⑤)
+7. **Turn persisted** to database (⑥)
+8. **History loops back** for next turn (⑥ → ③)
+
+Each abstraction solves one problem. Together, they create observable, auditable, stateless LLM systems using standard web patterns.
+
+## Verification
+
+Most chatbots are black boxes. with SATI:
+- **Proof of what the AI said** (cryptographic hashes)
+- **When it said it** (timestamps)
+- **What context it had** (full prompt reconstruction)
+- **Unalterable history** (blockchain-style chaining)
 
 ```
 Turn 1: hash(content₁) → chain₁ = hash(content₁ + "0")
@@ -64,36 +153,6 @@ Turn 3: hash(content₃) → chain₃ = hash(content₃ + chain₂)
 ```
 
 Each turn's chain hash depends on all previous turns. Changing any historical turn invalidates all subsequent hashes.
-
-## Architecture
-
-```
-User Input → Context Assembly → LLM Inference → Response + Hash
-                ↓
-    [RAG Context, History, Instructions]
-                ↓
-           Database Record
-    [Prompt, Response, Hashes, Metadata]
-```
-
-
-## Key Features
-
-- **Conversation persistence**: Multiple conversations tracked independently
-- **RAG integration**: Document retrieval with context tracking
-- **History management**: Configurable conversation history inclusion
-- **Chain verification**: Built-in endpoint to verify conversation integrity
-- **Request tracing**: Timestamp and duration tracking for all LLM calls
-
-## Implementation Pattern
-
-1. **Prompt Assembly**: Gather all context (user input, RAG results, history, instructions)
-2. **LLM Inference**: Send complete prompt to stateless LLM
-3. **Hash Generation**: Create content hash and chain hash linking to previous turn
-4. **Database Storage**: Persist turn with all metadata and hashes
-5. **Response**: Return LLM response with chain hash proof
-
-## Verification
 
 The system provides a `/verify` endpoint that:
 - Recalculates content hashes for all turns
@@ -108,20 +167,30 @@ This demo was prepared using Mistral. You can switch out the model, but performa
 - **Sequencing the full prompt combination**: the sequence used in the implementation (Query > RAG > Conversation History > Instructions) is deliberate and tuned for Mistral. Other LLMs might have different  interpretation of this sequence.
 - **JSON generation**: All the combination of factors above all influence how effective the JSON is created. Experimentation will be required.
 
-## Benefits
 
-### **Verifiability**
-Verify entire conversation chains or specific conversations for tampering
+## Hijacking and Prompt Injection
+- **Resilient to drift** - Instructions regenerated each turn  
+- **Resilient to hijacking** - Defenses reinforced dynamically per request
 
-### **Transparency**
-Complete audit trail of what context was provided to the LLM
+**The Tradeoff** - too many constraints make it difficult for LLM's to operate well. Balancing the performance is non-trivial.
 
-### **Accountability**
-Cryptographic proof of AI responses and conversation integrity
 
-### **Reproducibility**
-Full prompt reconstruction enables debugging and analysis
+## Caveats
 
-### **Compliance**
-Meet regulatory requirements for AI system auditability
+- Quality outputs require well-crafted prompts and instructions
+- Performance is subject to hardware
+- Local model capability and inference may vary
+- While resilient, it is not fully hardened against Prompt Injection
+- Current state shared here is a reference implementation - not hardened for production use
 
+
+## Support
+This is not a maintained framework.
+
+The repo was created to demonstrate the pattern 
+and guide those who would like to understanding and use it.
+Its sole purpose is to point out the way to build with AI in a web-first way.
+
+It is not definitive. Each component demonstrated can be modularized and optimized in a way that experts know how.
+
+Would love to see forks of an optimized .NET implementation, or in other languages.
