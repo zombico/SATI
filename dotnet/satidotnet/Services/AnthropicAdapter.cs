@@ -53,7 +53,7 @@ public class AnthropicAdapter : ILLMAdapter
 
         try
         {
-            var httpRequest = new HttpRequestMessage(HttpMethod.Post, _config.Endpoint)
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, url)
             {
                 Content = JsonContent.Create(requestBody)
             };
