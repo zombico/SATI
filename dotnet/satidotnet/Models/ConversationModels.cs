@@ -48,6 +48,8 @@ public class LLMConfiguration
 {
     public string Provider { get; set; } = "ollama";
     public OllamaConfig? Ollama { get; set; }
+    //public OpenAIConfig? OpenAI { get; set; }
+    public AnthropicConfig? Anthropic { get; set; }
 }
 
 public class OllamaConfig
@@ -58,4 +60,15 @@ public class OllamaConfig
     public int Timeout { get; set; }
     public string Format { get; set; } = string.Empty;
     public bool Stream { get; set; }
+}
+
+
+public class AnthropicConfig
+{
+    public string ApiKey { get; set; } = string.Empty;
+    public string Model { get; set; } = string.Empty;
+    public string BaseURL { get; set; } = string.Empty;
+    public string Endpoint { get; set; } = string.Empty;
+    public int Timeout { get; set; }
+    public int MaxTokens { get; set; }
 }

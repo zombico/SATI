@@ -1,7 +1,18 @@
 # SATI - Stateless Audit Trail Inference
-### HTTP-Native middleware for any LLM
+**The HTTP translation layer for LLMs**
 
 LLMs are stateless. REST is stateless. SATI is the bridge.
+
+## What is SATI
+
+SATI is HTTP middleware that makes LLM conversations work like REST resources:
+- **Stateless reconstruction** - no session store, conversations rebuilt from immutable records
+- **Tamper-proof history** - blockchain-style chain hashing for integrity
+- **Vendor-agnostic** - works with OpenAI, Anthropic, Ollama, Azure, or your own models
+- **Injection-resilient** - verified conversation history can't be manipulated
+
+Observe, audit, and control every LLM interaction using the same patterns you use for REST APIs.
+**Works with any LLM backend:** OpenAI, Anthropic, Azure OpenAI, Ollama, or your own infrastructure. Switch providers without changing your middleware layer.
 
 
 ![Screenshot description](docs/headerscreen.png)
@@ -28,13 +39,6 @@ dotnet run
 Or open the solution with Visual Studio or Rider.
 
 Both implementations run on `http://localhost:3000` with identical debugger UI.
-
-## What is SATI
-SATI is HTTP middleware for LLMs that works with any provider—local or cloud. Observe, audit, and control every interaction using the same patterns you already use for REST APIs.
-
-It is compatible with both cloud API models and local models.
-
-**Works with any LLM backend:** OpenAI, Anthropic, Azure OpenAI, Ollama, or your own infrastructure. Switch providers without changing your middleware layer.
 
 Instead of managing stateful sessions, it uses six core abstractions:
 - Observable Gateway → Intercept all calls

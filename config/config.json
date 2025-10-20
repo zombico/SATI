@@ -2,10 +2,10 @@
     "config": {
         "documentsPath": "../documents",
         "instructions": "../config/instructions.txt",
-        "name": "Canadian Privacy Act Helper Bot"
+        "name": ""
     },
     "llm": {
-        "provider": "ollama",
+        "provider": "anthropic",
         "ollama": {
             "host": "http://localhost:11434",
             "model": "mistral",

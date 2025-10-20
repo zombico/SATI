@@ -51,7 +51,7 @@ public class LLMService
         _adapter = provider switch
         {
             "ollama" => await CreateOllamaAdapterAsync(config.LLM.Ollama!),
-            // "anthropic" => await CreateAnthropicAdapterAsync(config.LLM.Anthropic!),
+            "anthropic" => await CreateAnthropicAdapterAsync(config.LLM.Anthropic!),
             "openai" => throw new NotImplementedException("OpenAI adapter not yet implemented"),
             _ => throw new InvalidOperationException($"Unsupported LLM provider: {provider}")
         };
@@ -80,20 +80,20 @@ public class LLMService
         return new OllamaAdapter(httpClient, logger, config);
     }
 
-    //private async Task<ILLMAdapter> CreateAnthropicAdapterAsync(AnthropicConfig config)
-    //{
-    //    config = ResolveEnvironmentVariables(config);
+    private async Task<ILLMAdapter> CreateAnthropicAdapterAsync(AnthropicConfig config)
+    {
+        config = ResolveEnvironmentVariables(config);
         
-    //    var httpClient = _serviceProvider.GetRequiredService<IHttpClientFactory>()
-    //        .CreateClient("Anthropic");
+        var httpClient = _serviceProvider.GetRequiredService<IHttpClientFactory>()
+            .CreateClient("Anthropic");
         
-    //    httpClient.BaseAddress = new Uri(config.BaseURL);
-    //    httpClient.Timeout = TimeSpan.FromMilliseconds(config.Timeout);
+        httpClient.BaseAddress = new Uri(config.BaseURL);
+        httpClient.Timeout = TimeSpan.FromMilliseconds(config.Timeout);
 
-    //    var logger = _serviceProvider.GetRequiredService<ILogger<AnthropicAdapter>>();
+        var logger = _serviceProvider.GetRequiredService<ILogger<AnthropicAdapter>>();
         
-    //    return new AnthropicAdapter(httpClient, logger, config);
-    //}
+        return new AnthropicAdapter(httpClient, logger, config);
+    }
 
     private static T ResolveEnvironmentVariables<T>(T config) where T : class
     {

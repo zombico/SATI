@@ -11,7 +11,7 @@ public class OllamaAdapter : ILLMAdapter
     private readonly HttpClient _httpClient;
     private readonly ILogger<OllamaAdapter> _logger;
     private readonly OllamaConfig _config;
-
+    
     public OllamaAdapter(HttpClient httpClient, ILogger<OllamaAdapter> logger, OllamaConfig config)
     {
         _httpClient = httpClient;
