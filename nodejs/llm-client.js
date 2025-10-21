@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { json } = require('express');
 
 /**
  * Resolves environment variable references in config values
@@ -121,23 +122,22 @@ class OllamaAdapter extends LLMAdapter {
 class OpenAIAdapter extends LLMAdapter {
     async generate(prompt) {
         const url = `${this.config.baseURL}${this.config.endpoint}`;
-
+        const jsonify = JSON.stringify(prompt)
         const response = await axios.post(url, {
             model: this.config.model,
-            messages: [
-                { role: 'user', content: prompt }
-            ],
-            response_format: { type: 'json_object' }
+            input: jsonify
         }, {
             timeout: this.config.timeout || 300000,
             headers: {
                 'Authorization': `Bearer ${this.config.apiKey}`,
+                'OpenAI-Organization': this.config.organization,
                 'Content-Type': 'application/json'
             }
         });
-
+        
+        const content = response?.data?.output[0]?.content[0]?.text
         return {
-            response: response.data.choices[0].message.content,
+            response: content,
             trace: response.trace
         };
     }
@@ -150,7 +150,6 @@ class AnthropicAdapter extends LLMAdapter {
     async generate(prompt) {
         const url = `${this.config.baseURL}${this.config.endpoint}`;
         const jsonify = JSON.stringify({ text: prompt })
-        console.log(jsonify)
         const response = await axios.post(url, {
             model: this.config.model,
             max_tokens: this.config.maxTokens || 4096,
@@ -168,7 +167,6 @@ class AnthropicAdapter extends LLMAdapter {
                 'Content-Type': 'application/json'
             }
         });
-        console.log(response.data)
 
         const content = response.data.content[0]
         const raw = content.text;
