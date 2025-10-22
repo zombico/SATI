@@ -2,6 +2,8 @@
 
 LLMs are stateless. REST is stateless. SATI is a protocol that makes LLM conversations work like REST resources.
 
+**Treat LLM interactions like HTTP requests**—every call is logged, timestamped, and verifiable. This unlocks standard web tooling: Prometheus monitoring, OpenTelemetry tracing, API gateways, and the DevOps stack you already use.
+
 ![Screenshot description](docs/headerscreen.png)
 Chat interface on the left. Full observability on the right.
 
@@ -9,7 +11,6 @@ Chat interface on the left. Full observability on the right.
 - **Stateless reconstruction** - no session store, conversations rebuilt from immutable records
 - **Tamper-proof history** - blockchain-style chain hashing for integrity
 - **Structured reasoning** - see what the AI was thinking, not just what it said
-- **Air-gapped operation** - local Ollama can run without internet
 
 Observe, audit, and verify every LLM interaction using standard HTTP/REST patterns.
 
