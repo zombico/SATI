@@ -9,12 +9,6 @@ SATI addresses a fundamental challenge in AI systems: **how do you prove what an
 
 Traditional chatbots maintain state in memory or databases that can be modified. SATI takes a different approach by treating each conversation turn as an immutable record in a cryptographic chain, similar to blockchain principles but optimized for conversational AI.
 
-## Generate JSON with Prompts
-
-A key aspect of SATI is that **prompts become first-class citizens**. Programmable behavior is accessible via prompts, allowing you to shape LLM outputs into specific JSON structures based on user input.
-
-This unlocks significant potential: LLMs become structured endpoints that can output the exact JSON needed to drive downstream operations. No parsing unstructured text—just reliable, typed responses.
-
 
 # SATI: 6 Core Abstractions
 
@@ -168,29 +162,28 @@ This demo was prepared using Mistral. You can switch out the model, but performa
 - **JSON generation**: All the combination of factors above all influence how effective the JSON is created. Experimentation will be required.
 
 
-## Hijacking and Prompt Injection
-- **Resilient to drift** - Instructions regenerated each turn  
-- **Resilient to hijacking** - Defenses reinforced dynamically per request
+## Generate JSON with Prompts
 
-**The Tradeoff** - too many constraints make it difficult for LLM's to operate well. Balancing the performance is non-trivial.
+A key aspect of SATI is that **prompts become first-class citizens**. Programmable behavior is accessible via prompts, allowing you to shape LLM outputs into specific JSON structures based on user input.
 
-
-## Caveats
-
-- Quality outputs require well-crafted prompts and instructions
-- Performance is subject to hardware
-- Local model capability and inference may vary
-- While resilient, it is not fully hardened against Prompt Injection
-- Current state shared here is a reference implementation - not hardened for production use
+This unlocks significant potential: LLMs become structured endpoints that can output the exact JSON needed to drive downstream operations. No parsing unstructured text—just reliable, typed responses.
 
 
-## Support
-This is not a maintained framework.
+## Dynamic Prompt Synthesis > Adversarial Patterns
+The user's input is a single sentence in a much larger prompt that includes instructions, documents, conversation history, and system context.
 
-The repo was created to demonstrate the pattern 
-and guide those who would like to understanding and use it.
-Its sole purpose is to point out the way to build with AI in a web-first way.
+Adversarial attempts enter, but their impact is diluted. The model has a wall of legitimate context to work with.
 
-It is not definitive. Each component demonstrated can be modularized and optimized in a way that experts know how.
+Legitimate queries flow smoothly through the transformer, yielding useful responses.
 
-Would love to see forks of an optimized .NET implementation, or in other languages.
+Adversarial attempts (prompt injection, jailbreaks) confuse the model amid all the context, typically defaulting to an apology pattern or refusing the request.
+
+Try it: red-team your own chatbot and see adversarial prompts fail naturally.
+
+**The Tradeoff** - Too much context and constraints can degrade LLM performance. Finding the right balance is non-trivial and requires testing with your specific use case.
+
+
+## Implementations
+
+- Node.js
+- .NET

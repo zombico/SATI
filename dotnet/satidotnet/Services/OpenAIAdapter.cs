@@ -1,19 +1,20 @@
-// Services/AnthropicAdapter.cs
+// Services/OpenAIAdapter.cs
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using satidotnet.Models;
+using System.Net.Http.Headers;
 
 namespace satidotnet.Services;
 
-public class AnthropicAdapter : ILLMAdapter
+public class OpenAIAdapter : ILLMAdapter
 {
     private readonly HttpClient _httpClient;
-    private readonly ILogger<AnthropicAdapter> _logger;
-    private readonly AnthropicConfig _config;
+    private readonly ILogger<OpenAIAdapter> _logger;
+    private readonly OpenAIConfig _config;
 
-    public AnthropicAdapter(HttpClient httpClient, ILogger<AnthropicAdapter> logger, AnthropicConfig config)
+    public OpenAIAdapter(HttpClient httpClient, ILogger<OpenAIAdapter> logger, OpenAIConfig config)
     {
         _httpClient = httpClient;
         _logger = logger;
@@ -40,15 +41,7 @@ public class AnthropicAdapter : ILLMAdapter
         var requestBody = new
         {
             model = _config.Model,
-            max_tokens = _config.MaxTokens > 0 ? _config.MaxTokens : 4096,
-            messages = new[]
-            {
-                new
-                {
-                    role = "user",
-                    content = jsonify
-                }
-            }
+            input = prompt
         };
 
         try
@@ -59,30 +52,28 @@ public class AnthropicAdapter : ILLMAdapter
             };
 
             // Match Node.js headers exactly
-            httpRequest.Headers.Add("x-api-key", _config.ApiKey);
-            httpRequest.Headers.Add("anthropic-version", "2023-06-01");
+            httpRequest.Headers.Add("OpenAI-Organization", _config.Organization);
+            httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _config.ApiKey);
             // Content-Type is automatically set by JsonContent.Create
 
             var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
             response.EnsureSuccessStatusCode();
 
-            var result = await response.Content.ReadFromJsonAsync<AnthropicResponse>(cancellationToken);
+            var result = await response.Content.ReadFromJsonAsync<OpenAIResponse>(cancellationToken);
             
             stopwatch.Stop();
-
-            // console.log(response.data)
+            
             _logger.LogInformation("{ResponseData}", JsonSerializer.Serialize(result));
 
-            if (result?.Content == null || result.Content.Length == 0)
+            if (result?.Output[0]?.Content == null || result.Output[0]?.Content.Length == 0)
             {
-                throw new LLMAdapterException("Anthropic returned empty response");
+                throw new LLMAdapterException("OpenAI returned empty response");
             }
 
-            // const content = response.data.content[0]
-            var content = result.Content[0];
+            var content = result.Output[0].Content;
             
             // const raw = content.text;
-            var raw = content.Text;
+            var raw = content[0].Text;
             
             // const jsonString = raw.replace(/```json|```/g, '').trim();
             var jsonString = Regex.Replace(raw, @"```json|```", "").Trim();
@@ -118,9 +109,9 @@ public class AnthropicAdapter : ILLMAdapter
         catch (HttpRequestException ex)
         {
             stopwatch.Stop();
-            _logger.LogError(ex, "Anthropic request failed after {Duration}ms", stopwatch.ElapsedMilliseconds);
+            _logger.LogError(ex, "OpenAI request failed after {Duration}ms", stopwatch.ElapsedMilliseconds);
 
-            throw new LLMAdapterException("Failed to communicate with Anthropic service", ex)
+            throw new LLMAdapterException("Failed to communicate with OpenAI service", ex)
             {
                 Trace = new RequestTrace
                 {
@@ -135,9 +126,31 @@ public class AnthropicAdapter : ILLMAdapter
         }
     }
 }
+public class OpenAIResponse
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
 
-// Anthropic API Models
-public class AnthropicResponse
+    [JsonPropertyName("object")]
+    public string Object { get; set; } = string.Empty;
+
+    [JsonPropertyName("created_at")]
+    public long CreatedAt { get; set; }
+
+    [JsonPropertyName("status")]
+    public string Status { get; set; } = string.Empty;
+
+    [JsonPropertyName("model")]
+    public string Model { get; set; } = string.Empty;
+
+    [JsonPropertyName("output")]
+    public OpenAIOutput[] Output { get; set; } = Array.Empty<OpenAIOutput>();
+
+    [JsonPropertyName("usage")]
+    public OpenAIUsage? Usage { get; set; }
+}
+
+public class OpenAIOutput
 {
     [JsonPropertyName("id")]
     public string Id { get; set; } = string.Empty;
@@ -145,36 +158,57 @@ public class AnthropicResponse
     [JsonPropertyName("type")]
     public string Type { get; set; } = string.Empty;
 
+    [JsonPropertyName("status")]
+    public string Status { get; set; } = string.Empty;
+
     [JsonPropertyName("role")]
     public string Role { get; set; } = string.Empty;
 
     [JsonPropertyName("content")]
-    public AnthropicContent[] Content { get; set; } = Array.Empty<AnthropicContent>();
-
-    [JsonPropertyName("model")]
-    public string Model { get; set; } = string.Empty;
-
-    [JsonPropertyName("stop_reason")]
-    public string? StopReason { get; set; }
-
-    [JsonPropertyName("usage")]
-    public AnthropicUsage? Usage { get; set; }
+    public OpenAIContent[] Content { get; set; } = Array.Empty<OpenAIContent>();
 }
 
-public class AnthropicContent
+public class OpenAIContent
 {
     [JsonPropertyName("type")]
     public string Type { get; set; } = string.Empty;
 
     [JsonPropertyName("text")]
     public string Text { get; set; } = string.Empty;
+
+    [JsonPropertyName("annotations")]
+    public object[] Annotations { get; set; } = Array.Empty<object>();
+
+    [JsonPropertyName("logprobs")]
+    public object[] Logprobs { get; set; } = Array.Empty<object>();
 }
 
-public class AnthropicUsage
+public class OpenAIUsage
 {
     [JsonPropertyName("input_tokens")]
     public int InputTokens { get; set; }
 
     [JsonPropertyName("output_tokens")]
     public int OutputTokens { get; set; }
+
+    [JsonPropertyName("total_tokens")]
+    public int TotalTokens { get; set; }
+
+    [JsonPropertyName("input_tokens_details")]
+    public InputTokensDetails? InputTokensDetails { get; set; }
+
+    [JsonPropertyName("output_tokens_details")]
+    public OutputTokensDetails? OutputTokensDetails { get; set; }
+}
+
+public class InputTokensDetails
+{
+    [JsonPropertyName("cached_tokens")]
+    public int CachedTokens { get; set; }
+}
+
+public class OutputTokensDetails
+{
+    [JsonPropertyName("reasoning_tokens")]
+    public int ReasoningTokens { get; set; }
 }

@@ -52,7 +52,7 @@ public class LLMService
         {
             "ollama" => await CreateOllamaAdapterAsync(config.LLM.Ollama!),
             "anthropic" => await CreateAnthropicAdapterAsync(config.LLM.Anthropic!),
-            "openai" => throw new NotImplementedException("OpenAI adapter not yet implemented"),
+            "openai" => await CreateOpenAIAdapterAsync(config.LLM.OpenAI!),
             _ => throw new InvalidOperationException($"Unsupported LLM provider: {provider}")
         };
 
@@ -93,6 +93,21 @@ public class LLMService
         var logger = _serviceProvider.GetRequiredService<ILogger<AnthropicAdapter>>();
         
         return new AnthropicAdapter(httpClient, logger, config);
+    }
+    
+    private async Task<ILLMAdapter> CreateOpenAIAdapterAsync(OpenAIConfig config)
+    {
+        config = ResolveEnvironmentVariables(config);
+        
+        var httpClient = _serviceProvider.GetRequiredService<IHttpClientFactory>()
+            .CreateClient("OpenAI");
+        
+        httpClient.BaseAddress = new Uri(config.BaseURL);
+        httpClient.Timeout = TimeSpan.FromMilliseconds(config.Timeout);
+
+        var logger = _serviceProvider.GetRequiredService<ILogger<OpenAIAdapter>>();
+        
+        return new OpenAIAdapter(httpClient, logger, config);
     }
 
     private static T ResolveEnvironmentVariables<T>(T config) where T : class

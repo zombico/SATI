@@ -182,7 +182,12 @@
             background: #7f1d1d;
             color: #fca5a5;
         }
-        .log-type.trace, .log-type.hash {
+        .log-type.trace {
+            border: 1px solid darkgoldenrod;
+            color: orange;
+        }
+        
+        .log-type.hash {
             border: 1px solid darkslateblue;
             color: slateblue;
         }

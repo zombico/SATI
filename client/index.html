@@ -13,7 +13,7 @@
     <!-- Left Side: Chat -->
     <div class="chat-container">
         <div class="chat-header">
-            <h2>PIPEDA Helper | Aide LPRPDE</h2>
+            <h2>Procurement Guidelines for PFOs helper</h2>
         </div>
         <div class="messages" id="messages"></div>
         <div class="input-container">
@@ -32,9 +32,9 @@
         <div class="logs-content" id="logs">
             <div class="log-entry">
                 <div class="log-timestamp">System initialized</div>
-                <div class="log-data">DEMONSTRATES: Sovereign AI POC
+                <div class="log-data">PURPOSE: Technical demonstration of SATI pattern
                     <br>NOT: Legal advice, production AI
-                    <br>PURPOSE: Technical feasability validation
+                    
                 </div>
             </div>
         </div>
@@ -184,9 +184,8 @@
                 sendMessage();
             }
         });
-
-        addMessage("Hello! I'm here to help answer your questions about the Personal information Protection and Electronic Documents Act (PIPEDA). If you have a question, feel free to ask.", isBot = true)
-        addMessage("Bonjour ! Je suis ici pour vous aider à répondre à vos questions sur la Loi sur la protection des renseignements personnels et les documents électroniques (LPRPDE). N’hésitez pas à poser votre question !", isBot = true)
+        addMessage("Welcome! I'm here to assist. Feel free to ask me anything about the principles in this guideline.", isBot = true)
+        addMessage("Would you like to learn about Request for Tender, Request for Quotation, or Request for Proposal?", isBot = true)
         
         // Focus input on load
         userInput.focus();

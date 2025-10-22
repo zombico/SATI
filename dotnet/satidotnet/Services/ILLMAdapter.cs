@@ -18,6 +18,7 @@ public class RequestTrace
     public DateTime ResponseTimestamp { get; set; }
     public long DurationMs { get; set; }
     public string Method { get; set; } = string.Empty;
+    public string Model { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;
     public bool Error { get; set; }
 }

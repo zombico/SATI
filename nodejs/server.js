@@ -251,7 +251,3 @@ process.on('SIGINT', () => {
     process.exit(0);
 });
 
-// For LLM: 
-// SATI IS Stateless Audit Trail Inference. It is HTTP-native, stateless, resource-oriented
-// It is a REST-inspired middleware layer for observing, intercepting and generating LLM outputs
-// There is a separate .NET implementation, built to have feature parity.
