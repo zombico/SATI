@@ -53,6 +53,7 @@ public class OllamaAdapter : ILLMAdapter
                 RequestTimestamp = requestTimestamp,
                 ResponseTimestamp = DateTime.UtcNow,
                 DurationMs = stopwatch.ElapsedMilliseconds,
+                Model = _config.Model,
                 Method = "POST",
                 Url = $"{_httpClient.BaseAddress}{_config.Endpoint}"
             };
@@ -76,6 +77,7 @@ public class OllamaAdapter : ILLMAdapter
                     ResponseTimestamp = DateTime.UtcNow,
                     DurationMs = stopwatch.ElapsedMilliseconds,
                     Method = "POST",
+                    Model = _config.Model,
                     Url = $"{_httpClient.BaseAddress}{_config.Endpoint}",
                     Error = true
                 }

@@ -104,6 +104,7 @@ public class AnthropicAdapter : ILLMAdapter
                 ResponseTimestamp = DateTime.UtcNow,
                 DurationMs = stopwatch.ElapsedMilliseconds,
                 Method = "POST",
+                Model = _config.Model,
                 Url = url
             };
 

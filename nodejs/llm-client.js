@@ -49,8 +49,7 @@ class LLMAdapter {
             request.meta = request.meta || {};
             request.meta.requestTimestamp = timestamp;
             request.meta.requestStartedAt = Date.now();
-
-            console.log(`[LLM CALL] ${request.method.toUpperCase()} ${request.baseURL || ''}${request.url} | Timestamp: ${timestamp}`);
+            console.log(`[LLM CALL ${this.config.model}] ${request.method.toUpperCase()} ${request.baseURL || ''}${request.url} | Timestamp: ${timestamp}`);
             return request;
         });
 
@@ -64,6 +63,7 @@ class LLMAdapter {
                     responseTimestamp: new Date().toISOString(),
                     durationMs: duration,
                     method: response.config.method.toUpperCase(),
+                    model: this.config.model,
                     url: `${response.config.baseURL || ''}${response.config.url}`
                 };
 

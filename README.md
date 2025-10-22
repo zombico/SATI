@@ -1,8 +1,6 @@
 # SATI - Stateless Audit Trail Inference
 
-
-LLMs are stateless. REST is stateless. SATI is HTTP middleware that makes LLM conversations work like REST resources:
-
+LLMs are stateless. REST is stateless. SATI is a protocol that makes LLM conversations work like REST resources.
 
 ![Screenshot description](docs/headerscreen.png)
 Chat interface on the left. Full observability on the right.
@@ -10,12 +8,10 @@ Chat interface on the left. Full observability on the right.
 ## What SATI enables
 - **Stateless reconstruction** - no session store, conversations rebuilt from immutable records
 - **Tamper-proof history** - blockchain-style chain hashing for integrity
-- **Injection-resilient** - verified conversation history can't be manipulated
+- **Structured reasoning** - see what the AI was thinking, not just what it said
+- **Air-gapped operation** - local Ollama can run without internet
 
-Observe, audit, and control every LLM interaction using standard REST API patterns.
-
-**Interoperable LLM backends:** Anthropic and Ollama support
-
+Observe, audit, and verify every LLM interaction using standard HTTP/REST patterns.
 
 ## Quick Start 
 
@@ -29,21 +25,9 @@ cd nodejs && npm install && node server.js
 **Cloud APIs (OpenAI/Anthropic):**
 Edit [config.json](config/config.json) with your provider and API key, then run.
 
-Both run on `http://localhost:3000` with identical UI.
+Both run on `http://localhost:3000` with identical UI. 
 
-## Why SATI
-
-Most LLM integrations are black boxes tightly coupled to one provider. SATI treats LLMs like HTTP APIs.
-
-Instead of managing stateful sessions, it uses six core abstractions:
-- Observable Gateway → Intercept all calls
-- Stateless Turns → No session state
-- Context Injection → RAG, history, instructions
-- Prompt Assembly → Dynamic composition
-- Cryptographic Audit → Tamper-evident chain
-- Reconstructed State → Events, not objects
-
-**The pattern is provider-agnostic.** Whether you're calling localhost or a cloud API, the middleware abstractions stay the same.
+Modify instructions, drop your files.
 
 **Core Benefits:**
 - **Provider independence** - Switch from OpenAI to Anthropic to local models by without refactoring

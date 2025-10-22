@@ -2,10 +2,10 @@
     "config": {
         "documentsPath": "../documents",
         "instructions": "../config/instructions.txt",
-        "name": ""
+        "name": "Procurement Guidelines for PFOs helper bot"
     },
     "llm": {
-        "provider": "openai",
+        "provider": "ollama",
         "ollama": {
             "host": "http://localhost:11434",
             "model": "mistral",
