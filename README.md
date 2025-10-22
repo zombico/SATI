@@ -18,9 +18,12 @@ Observe, audit, and verify every LLM interaction using standard HTTP/REST patter
 
 **Local (Ollama):**
 ```bash
+# Node.js
 ollama pull mistral
 cd nodejs && npm install && node server.js
-# Or: cd dotnet && dotnet run
+
+# .NET
+cd dotnet && dotnet run
 ```
 
 **Cloud APIs (OpenAI/Anthropic):**
@@ -28,7 +31,7 @@ Edit [config.json](config/config.json) with your provider and API key, then run.
 
 Both run on `http://localhost:3000` with identical UI. 
 
-Modify instructions, drop your files.
+
 
 **Core Benefits:**
 - **Provider independence** - Switch from OpenAI to Anthropic to local models by without refactoring
@@ -39,7 +42,7 @@ Modify instructions, drop your files.
 
 **Who This Is For:**
 
-*Developers prototyping AI features* - Ship in hours using local models, migrate to cloud APIs later without changing middleware.
+*Developers prototyping AI features* - Ship in hours using local models, migrate to cloud APIs later without changing middleware. Drop in your files, modify instructions and run it.
 
 *Platform teams* - Vendor-neutral telemetry, request/response tracing, and policy enforcement at the HTTP layer.
 
@@ -62,3 +65,6 @@ Fork it. Build with it. Make it yours.
 
 ## License
 MIT
+
+## Context
+Submitted to the ISED Canada AI National Sprint as a demonstration of HTTP-native patterns for observable, auditable LLM systems.
