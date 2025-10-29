@@ -134,7 +134,7 @@ class OpenAIAdapter extends LLMAdapter {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         const content = response?.data?.output[0]?.content[0]?.text
         return {
             response: content,
@@ -148,33 +148,34 @@ class OpenAIAdapter extends LLMAdapter {
  */
 class AnthropicAdapter extends LLMAdapter {
     async generate(instructions, userPrompt, ragContext, conversationContext) {
-        console.log(conversationContext)
+        console.log(ragContext.length)
 
         const url = `${this.config.baseURL}${this.config.endpoint}`;
-        // let messages = []
-        // messages.push()
+        
+        const systemInstructions = {
+            type: "text",
+            text: instructions,
+            cache_control: { type: "ephemeral" }
+        }
+        const ragInstructions = {
+            type: "text",
+            text: ragContext.length > 1 ? ragContext : "No documents found",
+            cache_control: { type: "ephemeral" }
+        }
+        const currentUserPrompt = {
+            role: 'user',
+            content: userPrompt
+        }
 
-        //const jsonify = JSON.stringify({ text: prompt })
         const response = await axios.post(url, {
             model: this.config.model,
             max_tokens: this.config.maxTokens || 4096,
             system: [
-                {
-                    type: "text",
-                    text: instructions,
-                    cache_control: { type: "ephemeral" }
-                },
-                {
-                    type: "text",
-                    text: ragContext ,
-                    cache_control: { type: "ephemeral" }
-                }
+                systemInstructions,
+                ragInstructions
             ],
             messages: [
-                {
-                    role: 'user',
-                    content: userPrompt
-                }
+                currentUserPrompt
             ]
         }, {
             timeout: this.config.timeout || 300000,
