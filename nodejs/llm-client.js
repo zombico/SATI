@@ -147,16 +147,33 @@ class OpenAIAdapter extends LLMAdapter {
  * Anthropic adapter
  */
 class AnthropicAdapter extends LLMAdapter {
-    async generate(prompt) {
+    async generate(instructions, userPrompt, ragContext, conversationContext) {
+        console.log(conversationContext)
+
         const url = `${this.config.baseURL}${this.config.endpoint}`;
-        const jsonify = JSON.stringify({ text: prompt })
+        // let messages = []
+        // messages.push()
+
+        //const jsonify = JSON.stringify({ text: prompt })
         const response = await axios.post(url, {
             model: this.config.model,
             max_tokens: this.config.maxTokens || 4096,
+            system: [
+                {
+                    type: "text",
+                    text: instructions,
+                    cache_control: { type: "ephemeral" }
+                },
+                {
+                    type: "text",
+                    text: ragContext ,
+                    cache_control: { type: "ephemeral" }
+                }
+            ],
             messages: [
                 {
                     role: 'user',
-                    content: jsonify
+                    content: userPrompt
                 }
             ]
         }, {

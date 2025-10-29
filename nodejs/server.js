@@ -125,10 +125,14 @@ async function assemblePrompt(contextConfig, userPrompt, conversationHistory = n
         instructions,
     ].filter(Boolean).join('\n\n').trim(); // filter removes empty strings
     
-    console.log(fullPrompt)
+    //console.log(fullPrompt)
     
     // Use LLM client instead of direct axios call
-    const result = await llmClient.generate(fullPrompt);
+    let result;
+    if (config.llm.provider === 'anthropic') {
+        result = await llmClient.generate(instructions, userPrompt, ragContext, conversationContext)
+    }
+    else result = await llmClient.generate(fullPrompt);
     return result;
 }
 
