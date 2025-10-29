@@ -147,11 +147,18 @@ class OpenAIAdapter extends LLMAdapter {
  * Anthropic adapter
  */
 class AnthropicAdapter extends LLMAdapter {
-    async generate(instructions, userPrompt, ragContext, conversationContext) {
-        console.log(ragContext.length)
-
+    async generate(instructions, userPrompt, ragContext, conversationHistory) {
         const url = `${this.config.baseURL}${this.config.endpoint}`;
-        
+        const currentUserPrompt = {
+            role: 'user',
+            content: userPrompt
+        }
+        const history = conversationHistory.flatMap(item => [
+        { role: 'user', content: item.user_prompt },
+        { role: 'assistant', content: item.llm_response }
+        ]);
+        history.push(currentUserPrompt)
+
         const systemInstructions = {
             type: "text",
             text: instructions,
@@ -162,10 +169,6 @@ class AnthropicAdapter extends LLMAdapter {
             text: ragContext.length > 1 ? ragContext : "No documents found",
             cache_control: { type: "ephemeral" }
         }
-        const currentUserPrompt = {
-            role: 'user',
-            content: userPrompt
-        }
 
         const response = await axios.post(url, {
             model: this.config.model,
@@ -174,9 +177,7 @@ class AnthropicAdapter extends LLMAdapter {
                 systemInstructions,
                 ragInstructions
             ],
-            messages: [
-                currentUserPrompt
-            ]
+            messages: history
         }, {
             timeout: this.config.timeout || 300000,
             headers: {
