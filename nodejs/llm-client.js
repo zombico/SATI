@@ -134,7 +134,7 @@ class OpenAIAdapter extends LLMAdapter {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         const content = response?.data?.output[0]?.content[0]?.text
         return {
             response: content,
@@ -147,18 +147,37 @@ class OpenAIAdapter extends LLMAdapter {
  * Anthropic adapter
  */
 class AnthropicAdapter extends LLMAdapter {
-    async generate(prompt) {
+    async generate(instructions, userPrompt, ragContext, conversationHistory) {
         const url = `${this.config.baseURL}${this.config.endpoint}`;
-        const jsonify = JSON.stringify({ text: prompt })
+        const currentUserPrompt = {
+            role: 'user',
+            content: userPrompt
+        }
+        const history = conversationHistory.flatMap(item => [
+        { role: 'user', content: item.user_prompt },
+        { role: 'assistant', content: item.llm_response }
+        ]);
+        history.push(currentUserPrompt)
+
+        const systemInstructions = {
+            type: "text",
+            text: instructions,
+            cache_control: { type: "ephemeral" }
+        }
+        const ragInstructions = {
+            type: "text",
+            text: ragContext.length > 1 ? ragContext : "No documents found",
+            cache_control: { type: "ephemeral" }
+        }
+
         const response = await axios.post(url, {
             model: this.config.model,
             max_tokens: this.config.maxTokens || 4096,
-            messages: [
-                {
-                    role: 'user',
-                    content: jsonify
-                }
-            ]
+            system: [
+                systemInstructions,
+                ragInstructions
+            ],
+            messages: history
         }, {
             timeout: this.config.timeout || 300000,
             headers: {
