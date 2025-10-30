@@ -2,10 +2,14 @@
     "config": {
         "documentsPath": "../documents",
         "instructions": "../config/instructions.txt",
-        "name": "Procurement Guidelines for PFOs helper bot"
+        "name": "Procurement Guidelines for PFOs helper",
+        "chatDisplayName": "Bot",
+        "buttonText": "Send",
+        "placeholder": "Type your message...",
+        "firstMessage": "Welcome! I'm here to assist. Feel free to ask me anything about the principles in this guideline. Would you like to learn about Request for Tender, Request for Quotation, or Request for Proposal?"
     },
     "llm": {
-        "provider": "ollama",
+        "provider": "openai",
         "ollama": {
             "host": "http://localhost:11434",
             "model": "mistral",

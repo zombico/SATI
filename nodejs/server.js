@@ -228,6 +228,10 @@ function getConversationHistory(conversationId, maxTurns = null) {
     return maxTurns ? stmt.all(conversationId, maxTurns) : stmt.all(conversationId);
 }
 
+app.get('/context', async (req, res) => {
+    res.json(config.config)
+})
+
 app.get('/metrics', async (req, res) => {
     res.setHeader('Content-Type', 'text/plain');
     res.send('Metrics endpoint - implement as needed');

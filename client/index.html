@@ -13,7 +13,7 @@
     <!-- Left Side: Chat -->
     <div class="chat-container">
         <div class="chat-header">
-            <h2>Procurement Guidelines for PFOs helper</h2>
+            <h2 id="header-title">Loading</h2>
         </div>
         <div class="messages" id="messages"></div>
         <div class="input-container">
@@ -34,35 +34,40 @@
                 <div class="log-timestamp">System initialized</div>
                 <div class="log-data">PURPOSE: Technical demonstration of SATI pattern
                     <br>NOT: Legal advice, production AI
-                    
+
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        const API_URL = 'http://localhost:3000'; 
+        const API_URL = 'http://localhost:3000';
 
         let turn = 1;
         let machineState = {};
         let conversationId = null;
 
         const messagesDiv = document.getElementById('messages');
+        const headerTitleDiv = document.getElementById('header-title');
         const logsDiv = document.getElementById('logs');
         const userInput = document.getElementById('userInput');
         const sendBtn = document.getElementById('sendBtn');
+        let botDisplayName = '';
 
         // Add message to chat
-        function addMessage(content, isBot = false) {
+        function addMessage(content, isBot = false, thinking = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isBot ? 'bot' : 'user'}`;
 
             const label = document.createElement('div');
             label.className = 'message-label';
-            label.textContent = isBot ? 'Bot' : null;
+            label.textContent = isBot ? botDisplayName : null;
 
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
+            if (thinking) {
+                contentDiv.id = 'thinking-div';    
+            } 
             contentDiv.textContent = content;
 
             messageDiv.appendChild(label);
@@ -91,7 +96,7 @@
             const dataDiv = document.createElement('div');
             dataDiv.className = 'log-data';
             dataDiv.textContent = typeof data === 'object' ? JSON.stringify(data, null, 2) : data;
-            
+
             logDiv.appendChild(timestampDiv);
             logDiv.appendChild(dataDiv);
 
@@ -119,7 +124,7 @@
             // Disable input while processing
             sendBtn.disabled = true;
             userInput.disabled = true;
-
+            
             // Add user message to chat
             addMessage(prompt, false);
 
@@ -128,6 +133,9 @@
 
             // Clear input
             userInput.value = '';
+
+            // Show thinking
+            addMessage(" ", isBot = true, thinking = true)
 
             try {
                 const response = await fetch(`${API_URL}/chat`, {
@@ -155,7 +163,8 @@
                     machineState = data.response;  // Keep the entire response object
                     machineState.turn = turn;  // Update turn for next iteration
                 }
-
+                // Remove thinking div
+                messagesDiv.removeChild(messagesDiv.lastChild)
                 // Add bot response to chat
                 if (data.response.answer) {
                     addMessage(data.response.answer, true);
@@ -177,6 +186,24 @@
             }
         }
 
+        async function getContext() {
+            try {
+                fetch('/context')
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Config:', data);
+                        headerTitleDiv.textContent = data.name;
+                        document.title = data.name;
+                        botDisplayName=data.chatDisplayName;
+                        sendBtn.textContent = data.buttonText;
+                        userInput.placeholder = data.placeholder;
+                        addMessage(data.firstMessage, isBot = true);
+                    })
+            } catch (e) {
+                console.error(e)
+            }
+        }
+
         // Event listeners
         sendBtn.addEventListener('click', sendMessage);
         userInput.addEventListener('keypress', (e) => {
@@ -184,9 +211,7 @@
                 sendMessage();
             }
         });
-        addMessage("Welcome! I'm here to assist. Feel free to ask me anything about the principles in this guideline.", isBot = true)
-        addMessage("Would you like to learn about Request for Tender, Request for Quotation, or Request for Proposal?", isBot = true)
-        
+        getContext();
         // Focus input on load
         userInput.focus();
     </script>

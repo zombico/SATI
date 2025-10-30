@@ -74,6 +74,17 @@
         .message-content {
             line-height: 1.5;
         }
+        @keyframes dots {
+            0%, 20% { content: '..'; }
+            40% { content: '...'; }
+            60% { content: '....'; }
+            80% { content: '...'; } 
+            100% { content: '..'; }
+        }
+        #thinking-div::after {
+            content: '';
+            animation: dots 1s infinite;
+        }
 
         .input-container {
             padding: 20px;
