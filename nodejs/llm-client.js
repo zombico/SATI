@@ -128,15 +128,26 @@ class OpenAIAdapter extends LLMAdapter {
         ]);
         const historyString = JSON.stringify(history)
         
-        const structuredPrompt = `
-            Instructions: ${instructions} | 
-            Relevant Docs: ${ragContext} | 
-            Conversation History: ${historyString} |
-            User Input: ${userPrompt}
-        `
         const response = await axios.post(url, {
             model: this.config.model,
-            input: structuredPrompt
+            input: [
+                {
+                    role: "developer",
+                    content: instructions
+                },
+                {
+                    role: "developer",
+                    content: ragContext
+                },
+                {
+                    role: "user",
+                    content: historyString
+                },
+                {
+                    role: "user",
+                    content: userPrompt
+                }
+            ]
         }, {
             timeout: this.config.timeout || 300000,
             headers: {
