@@ -124,15 +124,12 @@ async function assemblePrompt(contextConfig, userPrompt, conversationHistory = n
         conversationContext,
         instructions,
     ].filter(Boolean).join('\n\n').trim(); // filter removes empty strings
-    
-    //console.log(fullPrompt)
-    
+        
     // Use LLM client instead of direct axios call
     let result;
-    if (config.llm.provider === 'anthropic') {
+    if (config.llm.provider === 'anthropic'|| config.llm.provider === 'openai' ) {
         result = await llmClient.generate(instructions, userPrompt, ragContext, conversationHistory)
-    }
-    else result = await llmClient.generate(fullPrompt);
+    } else result = await llmClient.generate(fullPrompt);
     return result;
 }
 
