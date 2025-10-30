@@ -120,12 +120,23 @@ class OllamaAdapter extends LLMAdapter {
  * OpenAI adapter
  */
 class OpenAIAdapter extends LLMAdapter {
-    async generate(prompt) {
+    async generate(instructions, userPrompt, ragContext, conversationHistory) {
         const url = `${this.config.baseURL}${this.config.endpoint}`;
-        const jsonify = JSON.stringify(prompt)
+        const history = conversationHistory.flatMap(item => [
+        { role: 'user', content: item.user_prompt },
+        { role: 'assistant', content: JSON.parse(item.llm_response).answer  }
+        ]);
+        const historyString = JSON.stringify(history)
+        
+        const structuredPrompt = `
+            Instructions: ${instructions} | 
+            Relevant Docs: ${ragContext} | 
+            Conversation History: ${historyString} |
+            User Input: ${userPrompt}
+        `
         const response = await axios.post(url, {
             model: this.config.model,
-            input: jsonify
+            input: structuredPrompt
         }, {
             timeout: this.config.timeout || 300000,
             headers: {
@@ -155,10 +166,9 @@ class AnthropicAdapter extends LLMAdapter {
         }
         const history = conversationHistory.flatMap(item => [
         { role: 'user', content: item.user_prompt },
-        { role: 'assistant', content: item.llm_response }
+        { role: 'assistant', content: JSON.parse(item.llm_response).answer }
         ]);
         history.push(currentUserPrompt)
-
         const systemInstructions = {
             type: "text",
             text: instructions,
