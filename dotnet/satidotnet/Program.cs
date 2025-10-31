@@ -189,6 +189,44 @@ app.MapPost("/chat", async (
 .WithName("Chat")
 .WithOpenApi();
 
+app.MapGet("/context", () =>
+{
+    try
+    {
+        var relativePath = Path.Combine(
+            Directory.GetCurrentDirectory(), 
+            "..", 
+            "..", 
+            "config",
+            "config.json"
+        );
+        
+        var configPath = Path.GetFullPath(relativePath);
+        var jsonString = File.ReadAllText(configPath);
+        
+        // Parse the full JSON
+        var fullConfig = JsonSerializer.Deserialize<JsonElement>(jsonString);
+        
+        // Extract just the "config" property
+        if (fullConfig.TryGetProperty("config", out var configProperty))
+        {
+            return Results.Ok(configProperty);
+        }
+        
+        return Results.NotFound("Config property not found in JSON");
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"Error reading config: {ex.Message}");
+    }
+    //var relativePath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "config", "config.json");
+    //var configPath = Path.GetFullPath(relativePath);
+    //var jsonString = File.ReadAllText(configPath);
+    //var root = JsonSerializer.Deserialize<RootConfig>(jsonString);
+    //Console.WriteLine(root.Config);
+    //return Results.Ok(root.Config);
+});
+
 // Verify chain integrity
 app.MapGet("/verify/{conversationId?}", (string? conversationId, ConversationService conversationService) =>
 {
@@ -228,3 +266,19 @@ record ChatResponse
     public RequestTrace Trace { get; set; } = new();
     public string HashMsg { get; set; } = string.Empty;
 };
+
+public class ConfigResponse
+{
+    public string DocumentsPath { get; set; }
+    public string Instructions { get; set; }
+    public string Name { get; set; }
+    public string ChatDisplayName { get; set; }
+    public string ButtonText { get; set; }
+    public string Placeholder { get; set; }
+    public string FirstMessage { get; set; }
+}
+
+public class RootConfig
+{
+    public ConfigResponse Config { get; set; }
+}
