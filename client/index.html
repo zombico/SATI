@@ -4,6 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
     <title>Chatbot Debugger</title>
     <link rel="stylesheet" href="style.css">
     <link rel="icon" href="/favicon.png">
@@ -32,9 +34,8 @@
         <div class="logs-content" id="logs">
             <div class="log-entry">
                 <div class="log-timestamp">System initialized</div>
-                <div class="log-data">PURPOSE: Technical demonstration of SATI pattern
-                    <br>NOT: Legal advice, production AI
-
+                <div class="log-data">For internal use only
+                    <br>NOT: Legal advice
                 </div>
             </div>
         </div>
@@ -167,7 +168,9 @@
                 messagesDiv.removeChild(messagesDiv.lastChild)
                 // Add bot response to chat
                 if (data.response.answer) {
-                    addMessage(data.response.answer, true);
+                    const parsedResponse = DOMPurify.sanitize(marked.parse(data.response.answer));
+                    addMessage('', true);
+                    messagesDiv.lastChild.insertAdjacentHTML('beforeend',parsedResponse);
                 } else if (typeof data.response === 'string') {
                     addMessage(data.response, true);
                 } else {
