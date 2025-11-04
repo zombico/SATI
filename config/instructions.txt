@@ -28,7 +28,7 @@ Synthesize multiple answers into a SINGLE json.
 
 {
     "reasoning": "summary of how the answer was generated",
-    "answer": "The executive summary and appropriate explanation of the reasoning",
+    "answer": "Full response to user and an appropriate explanation of the reasoning",
     "audit": {
         "references": [document.section]
     }

@@ -178,6 +178,8 @@
                 }
 
             } catch (error) {
+                // Remove thinking div
+                messagesDiv.removeChild(messagesDiv.lastChild)
                 console.error('Error:', error);
                 addLog('error', error.message);
                 addMessage('Error: Failed to get response from server', true);
