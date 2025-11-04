@@ -279,6 +279,55 @@ class GeminiAdapter extends LLMAdapter {
 }
 
 /**
+ * Cohere adapter
+ */
+class CohereAdapter extends LLMAdapter {
+    async generate(instructions, userPrompt, ragContext, conversationHistory) {
+        const url = `${this.config.baseURL}${this.config.endpoint}`;
+        const currentUserPrompt = {
+            role: 'user',
+            content: userPrompt
+        }
+        const history = conversationHistory.flatMap(item => [
+        { role: 'user', content: item.user_prompt },
+        { role: 'assistant', content: JSON.parse(item.llm_response).answer }
+        ]);
+        history.push(currentUserPrompt)
+        const systemInstructions = {
+            role: "system",
+            content: instructions,
+        }
+        const ragInstructions = {
+            role: "system",
+            content: ragContext.length > 1 ? ragContext : "No documents found",
+        }
+        history.push(systemInstructions)
+        history.push(ragInstructions)
+        console.log(history)
+        const response = await axios.post(url, {
+            model: this.config.model,
+            max_tokens: this.config.maxTokens || 4096,
+            messages: history
+        }, {
+            timeout: this.config.timeout || 300000,
+            headers: {
+                'Authorization': `Bearer ${this.config.apiKey}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        console.log(response)
+        const content = response.data.message.content[0]
+        const raw = content.text;
+        const jsonString = raw.replace(/```json|```/g, '').trim();
+        
+        return {
+            response: jsonString,
+            trace: response.trace
+        };
+    }
+}
+
+/**
  * Factory function to create appropriate adapter
  */
 function createLLMClient(config) {
@@ -298,6 +347,8 @@ function createLLMClient(config) {
             return new AnthropicAdapter(providerConfig);
         case 'gemini':
             return new GeminiAdapter(providerConfig);
+        case 'cohere':
+            return new CohereAdapter(providerConfig);
         default:
             throw new Error(`Unsupported LLM provider: ${providerName}`);
     }
