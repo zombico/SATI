@@ -2,6 +2,7 @@
     "config": {
         "documentsPath": "../documents",
         "instructions": "../config/instructions.txt",
+        "ragSummary": "../config/ragSummary.txt",
         "name": "Procurement Guidelines for PFOs helper",
         "chatDisplayName": "Bot",
         "buttonText": "Send",
