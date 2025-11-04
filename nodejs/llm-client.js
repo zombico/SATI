@@ -211,13 +211,66 @@ class AnthropicAdapter extends LLMAdapter {
         const content = response.data.content[0]
         const raw = content.text;
         const jsonString = raw.replace(/```json|```/g, '').trim();
-        let parsed;
-        try {
-            parsed = JSON.parse(jsonString);
-            console.log(parsed);
-        } catch (e) {
-            console.error("Invalid JSON:", e);
-        }
+        
+        return {
+            response: jsonString,
+            trace: response.trace
+        };
+    }
+}
+
+/**
+ * Gemini adapter
+ */
+class GeminiAdapter extends LLMAdapter {
+    async generate(instructions, userPrompt, ragContext, conversationHistory) {
+        const url = `${this.config.baseURL}${this.config.model}${this.config.endpoint}`;
+        const history = conversationHistory?.flatMap(item => [
+        { role: 'user', content: item.user_prompt },
+        { role: 'model', content: JSON.parse(item.llm_response).answer  }
+        ]);
+        const historyString = JSON.stringify(history)
+        
+        const response = await axios.post(url, {
+            contents: [
+                {
+                    role: "model",
+                    parts: [
+                        { text: instructions }
+                    ]
+                },
+                ragContext && {
+                    role: "model",
+                    parts: [
+                        { text: ragContext }
+                    ]
+                },
+                historyString && {
+                    role: "model",
+                    parts: [
+                        { text: historyString }
+                    ]
+                },
+                {
+                    role: "user",
+                    parts: [
+                        { text: userPrompt }
+                    ]
+                }
+            ]
+        }, {
+            timeout: this.config.timeout || 300000,
+            headers: {
+                'x-goog-api-key': this.config.apiKey,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const candidates = response.data.candidates[0]
+        const content = candidates.content.parts[0]
+        const raw = content.text;
+        const jsonString = raw.replace(/```json|```/g, '').trim();
+        
         return {
             response: jsonString,
             trace: response.trace
@@ -243,6 +296,8 @@ function createLLMClient(config) {
             return new OpenAIAdapter(providerConfig);
         case 'anthropic':
             return new AnthropicAdapter(providerConfig);
+        case 'gemini':
+            return new GeminiAdapter(providerConfig);
         default:
             throw new Error(`Unsupported LLM provider: ${providerName}`);
     }

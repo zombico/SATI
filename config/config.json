@@ -10,7 +10,7 @@
         "firstMessage": "Welcome! I'm here to assist. Feel free to ask me anything about the principles in this guideline. Would you like to learn about Request for Tender, Request for Quotation, or Request for Proposal?"
     },
     "llm": {
-        "provider": "openai",
+        "provider": "gemini",
         "ollama": {
             "host": "http://localhost:11434",
             "model": "mistral",
@@ -34,6 +34,13 @@
             "endpoint": "/messages",
             "timeout": 300000,
             "maxTokens": 4096
+        },
+        "gemini": {
+            "apiKey": "",
+            "model": "gemini-2.5-flash",
+            "baseURL": "https://generativelanguage.googleapis.com/v1beta/models/",
+            "endpoint": ":generateContent",
+            "timeout": 300000            
         }
     }
 }

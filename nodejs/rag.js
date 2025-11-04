@@ -192,7 +192,7 @@ class SimpleRAG {
     
     // Enhanced keyword extraction
     const stopWords = new Set([
-      'the', 'is', 'at', 'which', 'on', 'and', 'a', 'to', 'are', 'as', 
+      'what', 'the', 'is', 'at', 'which', 'on', 'and', 'a', 'to', 'are', 'as', 
       'was', 'with', 'for', 'of', 'in', 'by', 'an', 'be', 'or', 'that',
       'this', 'will', 'you', 'have', 'it', 'not', 'can', 'from', 'they',
       'we', 'been', 'has', 'had', 'do', 'would', 'could', 'should'

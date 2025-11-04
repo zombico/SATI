@@ -129,13 +129,15 @@ async function assemblePrompt(contextConfig, userPrompt, conversationHistory = n
     async function ragExpander(userPrompt) {
         const ragSummaryPath = path.join(__dirname, contextConfig.config.ragSummary)
         const ragSummary = fs.readFileSync(ragSummaryPath, "utf-8");
-        const expander = `Analyze the user prompt and the about, infer what the user is asking. 
-            Rewrite the query using proper terminology from the domain.
-            Your response must be a single JSON object with a field "answer" containing ONE optimized search query.
+        const expander = `Analyze the user prompt and the RAG Summary, infer what the user is asking. 
+            IF IT IS RELEVANT, Rewrite the query using proper terminology from the domain.
+            Your response must be a SINGLE JSON object with a field "answer" containing ONE optimized search query.
             Focus on: correcting spelling, using domain-specific terms, and being specific.
-            It should be clean and have no other strings.
+            It should be clean and have no other strings. 
+            ## DO NOT OUTPUT ANYTHING ELSE
             `
         const result = await llmClient.generate(expander, userPrompt, ragSummary, conversationHistory)
+        console.log('ENHANCED QUERY:',result)
         const parsed = JSON.parse(result.response)
         const updatedPrompt = parsed.answer
         return updatedPrompt
@@ -151,9 +153,10 @@ async function assemblePrompt(contextConfig, userPrompt, conversationHistory = n
         
     // Use LLM client instead of direct axios call
     let result;
-    if (config.llm.provider === 'anthropic'|| config.llm.provider === 'openai' ) {
+    if (config.llm.provider === 'anthropic'|| config.llm.provider === 'openai' || config.llm.provider === 'gemini' ) {
         result = await llmClient.generate(instructions, userPrompt, ragContext, conversationHistory)
     } else result = await llmClient.generate(fullPrompt);
+
     return result;
 }
 
