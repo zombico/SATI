@@ -1,0 +1,9 @@
+# RAG SUMMARY: Procurement Guideline for Publicly Funded Organizations (PFOs) in Ontario
+
+This document is Ontario's Procurement Guideline for Publicly Funded Organizations (PFOs)—a voluntary reference tool 
+for non-designated charities and not-for-profit groups receiving government funding.
+
+It establishes five core principles (responsible management, value for money, vendor access, quality service, 
+and trade compliance) and outlines a nine-step procurement process including planning, market canvas, competitive bidding, 
+contracting, and record-keeping. Organizations should match their procurement method (informal, invitational competitive, or open 
+competitive) to the purchase value and risk level.
