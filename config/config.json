@@ -10,7 +10,7 @@
         "firstMessage": "Welcome! I'm here to assist. Feel free to ask me anything about the principles in this guideline. Would you like to learn about Request for Tender, Request for Quotation, or Request for Proposal?"
     },
     "llm": {
-        "provider": "gemini",
+        "provider": "cohere",
         "ollama": {
             "host": "http://localhost:11434",
             "model": "mistral",
@@ -41,6 +41,13 @@
             "baseURL": "https://generativelanguage.googleapis.com/v1beta/models/",
             "endpoint": ":generateContent",
             "timeout": 300000            
+        },
+        "cohere": {
+            "apiKey": "",
+            "model": "command-a-03-2025",
+            "baseURL": "https://api.cohere.ai/",
+            "endpoint": "v2/chat",
+            "timeout": 300000
         }
     }
 }
