@@ -28,7 +28,7 @@
             justify-content: space-between;
         }
 
-        .chat-header h2 {
+        .chat-header h1 {
             font-size: 18px;
             font-weight: 600;
         }
@@ -258,4 +258,37 @@
 
         ::-webkit-scrollbar-thumb:hover {
             background: #444;
+        }
+
+        /* Accessibility - Visually hidden content (for screen readers only) */
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+
+        /* Skip link for keyboard navigation */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: #2563eb;
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 0 0 4px 0;
+            z-index: 100;
+            font-weight: 500;
+        }
+
+        .skip-link:focus {
+            top: 0;
+            outline: 2px solid white;
+            outline-offset: 2px;
         }

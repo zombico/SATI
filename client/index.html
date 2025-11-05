@@ -12,26 +12,30 @@
 </head>
 
 <body>
+    <!-- Skip to main content link -->
+    <a href="#userInput" class="skip-link">Skip to chat input</a>
+
     <!-- Left Side: Chat -->
-    <div class="chat-container">
-        <div class="chat-header">
-            <h2 id="header-title">Loading</h2>
-        </div>
-        <div class="messages" id="messages"></div>
-        <div class="input-container">
+    <main class="chat-container">
+        <header class="chat-header">
+            <h1 id="header-title" aria-live="polite">Loading</h1>
+        </header>
+        <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions" aria-atomic="false"></div>
+        <form class="input-container" aria-label="Message input form">
             <div class="input-wrapper">
-                <input type="text" id="userInput" placeholder="Type your message..." autocomplete="off" />
-                <button id="sendBtn">Send</button>
+                <label for="userInput" class="visually-hidden">Chat message</label>
+                <input type="text" id="userInput" placeholder="Type your message..." autocomplete="off" aria-label="Type your message" required />
+                <button type="submit" id="sendBtn" aria-label="Send message">Send</button>
             </div>
-        </div>
-    </div>
+        </form>
+    </main>
 
     <!-- Right Side: Logs -->
-    <div class="logs-container">
-        <div class="logs-header">
+    <aside class="logs-container" aria-label="System Logs">
+        <header class="logs-header">
             <h2>System Logs</h2>
-        </div>
-        <div class="logs-content" id="logs">
+        </header>
+        <div class="logs-content" id="logs" role="log" aria-live="polite" aria-atomic="false">
             <div class="log-entry">
                 <div class="log-timestamp">System initialized</div>
                 <div class="log-data">For internal use only
@@ -39,7 +43,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </aside>
 
     <script>
         const API_URL = 'http://localhost:3000';
@@ -59,6 +63,8 @@
         function addMessage(content, isBot = false, thinking = false) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isBot ? 'bot' : 'user'}`;
+            messageDiv.setAttribute('role', 'article');
+            messageDiv.setAttribute('aria-label', isBot ? 'Bot message' : 'User message');
 
             const label = document.createElement('div');
             label.className = 'message-label';
@@ -67,8 +73,9 @@
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
             if (thinking) {
-                contentDiv.id = 'thinking-div';    
-            } 
+                contentDiv.id = 'thinking-div';
+                contentDiv.setAttribute('aria-label', 'Bot is thinking');
+            }
             contentDiv.textContent = content;
 
             messageDiv.appendChild(label);
@@ -118,14 +125,20 @@
         }
 
         // Send message to server
-        async function sendMessage() {
+        async function sendMessage(event) {
+            if (event) {
+                event.preventDefault(); // Prevent form submission
+            }
+
             const prompt = userInput.value.trim();
             if (!prompt) return;
 
             // Disable input while processing
             sendBtn.disabled = true;
             userInput.disabled = true;
-            
+            sendBtn.setAttribute('aria-busy', 'true');
+            userInput.setAttribute('aria-busy', 'true');
+
             // Add user message to chat
             addMessage(prompt, false);
 
@@ -183,10 +196,15 @@
                 console.error('Error:', error);
                 addLog('error', error.message);
                 addMessage('Error: Failed to get response from server', true);
+                // Add alert role to error message
+                const errorDiv = messagesDiv.lastChild;
+                errorDiv.setAttribute('role', 'alert');
             } finally {
                 // Re-enable input
                 sendBtn.disabled = false;
                 userInput.disabled = false;
+                sendBtn.removeAttribute('aria-busy');
+                userInput.removeAttribute('aria-busy');
                 userInput.focus();
             }
         }
@@ -210,12 +228,9 @@
         }
 
         // Event listeners
-        sendBtn.addEventListener('click', sendMessage);
-        userInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
+        const inputForm = document.querySelector('.input-container');
+        inputForm.addEventListener('submit', sendMessage);
+
         getContext();
         // Focus input on load
         userInput.focus();
