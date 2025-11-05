@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 const SimpleRAG = require('./rag');
 const config = require('../config/config.json');
 const fs = require('fs');
@@ -9,7 +10,7 @@ const Database = require('better-sqlite3');
 const { createLLMClient } = require('./llm-client');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -17,6 +18,8 @@ app.use(express.static(path.join(__dirname, '../client')));
 
 let ragInstance = null;
 let llmClient = null;
+let cachedInstructions = null;
+let cachedRagSummary = null;
 
 // Initialize database
 const db = new Database('./conversation.db');
@@ -44,7 +47,14 @@ const insertTurn = db.prepare(`
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
-app.post('/chat', async (req, res) => {
+// Rate limiting
+const chatLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: 'Too many requests, please try again later'
+});
+
+app.post('/chat', chatLimiter, async (req, res) => {
     try {
         let { prompt, turn, conversationId, includeHistory = true } = req.body;
         // Generate conversationId if new conversation
@@ -57,7 +67,7 @@ app.post('/chat', async (req, res) => {
             conversationHistory = getConversationHistory(conversationId);
         }
         console.log(conversationHistory)
-        const result = await assemblePrompt(config, prompt, conversationHistory)
+        const result = await assemblePrompt(prompt, conversationHistory)
         console.log(result)
         const satiJson = JSON.parse(result.response.trim())
         console.log(satiJson)
@@ -95,9 +105,8 @@ app.post('/chat', async (req, res) => {
 })
 
 // Generic context processor
-async function assemblePrompt(contextConfig, userPrompt, conversationHistory = null) {
-    const instructionsPath = path.join(__dirname, contextConfig.config.instructions)
-    const instructions = fs.readFileSync(instructionsPath, "utf-8");
+async function assemblePrompt(userPrompt, conversationHistory = null) {
+    const instructions = cachedInstructions;
 
     // Build conversation context if history exists
     let conversationContext = '';
@@ -127,8 +136,7 @@ async function assemblePrompt(contextConfig, userPrompt, conversationHistory = n
 
     // rag expander
     async function ragExpander(userPrompt) {
-        const ragSummaryPath = path.join(__dirname, contextConfig.config.ragSummary)
-        const ragSummary = fs.readFileSync(ragSummaryPath, "utf-8");
+        const ragSummary = cachedRagSummary;
         const expander = `Analyze the user prompt and the RAG Summary, infer what the user is asking. 
             IF IT IS RELEVANT, Rewrite the query using proper terminology from the domain.
             Your response must be a SINGLE JSON object with a field "answer" containing ONE optimized search query.
@@ -264,16 +272,35 @@ app.get('/metrics', async (req, res) => {
     res.send('Metrics endpoint - implement as needed');
 });
 
+app.get('/health', (req, res) => {
+    const health = {
+        status: 'ok',
+        timestamp: Date.now(),
+        rag: ragInstance?.isLoaded || false,
+        llm: !!llmClient,
+        db: !!db
+    };
+    res.json(health);
+});
+
+
 app.listen(PORT, async () => {
     // Initialize LLM client from config
     llmClient = createLLMClient(config);
     console.log(`LLM Provider: ${config.llm.provider}`);
-    
+
+    // Cache instruction files at startup to avoid sync reads per request
+    const instructionsPath = path.join(__dirname, config.config.instructions);
+    const ragSummaryPath = path.join(__dirname, config.config.ragSummary);
+    cachedInstructions = fs.readFileSync(instructionsPath, "utf-8");
+    cachedRagSummary = fs.readFileSync(ragSummaryPath, "utf-8");
+    console.log(`Cached instructions and RAG summary`);
+
     // Initialize RAG
     const documentsPath = path.join(__dirname, config.config.documentsPath);
     ragInstance = new SimpleRAG(documentsPath);
     await ragInstance.initialize();
-    
+
     console.log(`Server running on http://localhost:${PORT}`);
     console.log(`Database initialized: conversation.db`);
 });
