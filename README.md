@@ -48,7 +48,7 @@ Both run on `http://localhost:3000` with identical UI.
 
 *Regulated industries* - Tamper-evident audit logs work identically whether you're using Azure, OpenAI or self-hosted models.
 
-Full technical deep-dive: [pattern.md](./docs/pattern.md)
+Full technical deep-dive: [pattern.md](./docs/PATTERN.md)
 
 ## This is a Pattern, Not a Product
 
